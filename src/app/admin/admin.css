@@ -1,0 +1,255 @@
+/* Administration BOS & BOP — interface moderne, sobre et lisible */
+
+:root {
+  --or: #ddc076; /* doré de la charte BOS & BOP */
+  --or-fonce: #c4a95c;
+  --encre: #1f2430;
+  --encre-2: #343b4d;
+  --fond: #f4f5f8;
+  --carte: #ffffff;
+  --bord: #e3e6ee;
+  --texte: #262b38;
+  --texte-2: #6b7280;
+  --ok: #2e7d32;
+  --alerte: #b3261e;
+  --info: #0b57d0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+a { color: var(--info); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- Structure ---------- */
+
+.admin-shell { display: flex; min-height: 100vh; }
+
+.admin-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--encre);
+  color: #e8eaf1;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.admin-sidebar .brand {
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.admin-sidebar .brand strong { color: var(--or); font-size: 17px; letter-spacing: 0.5px; }
+.admin-sidebar .brand span { display: block; font-size: 12px; color: #9aa1b5; margin-top: 2px; }
+
+.admin-nav { padding: 12px 10px; flex: 1; }
+.admin-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: #cfd4e2;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.admin-nav a:hover { background: var(--encre-2); color: #fff; text-decoration: none; }
+.admin-nav a.active { background: var(--or); color: #241f10; }
+.admin-nav .badge-nav {
+  margin-left: auto;
+  background: var(--alerte);
+  color: #fff;
+  border-radius: 99px;
+  font-size: 11px;
+  padding: 1px 7px;
+  font-weight: 700;
+}
+.admin-nav a.active .badge-nav { background: #241f10; color: var(--or); }
+
+.admin-sidebar .sidebar-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  color: #9aa1b5;
+}
+.admin-sidebar .sidebar-footer button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #cfd4e2;
+  border-radius: 7px;
+  padding: 6px 12px;
+  cursor: pointer;
+  margin-top: 8px;
+  width: 100%;
+  font-size: 13px;
+}
+.admin-sidebar .sidebar-footer button:hover { background: var(--encre-2); color: #fff; }
+
+.admin-main { flex: 1; padding: 28px 34px 60px; max-width: 1200px; }
+
+.admin-main h1 { font-size: 24px; margin: 0 0 4px; }
+.admin-main .subtitle { color: var(--texte-2); margin: 0 0 24px; }
+
+/* ---------- Cartes / grilles ---------- */
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin: 20px 0 28px; }
+.card {
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.card .kpi { font-size: 30px; font-weight: 700; }
+.card .kpi-label { color: var(--texte-2); font-size: 13px; }
+.card h2 { font-size: 16px; margin: 0 0 12px; }
+
+.panel {
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 22px;
+}
+.panel h2 { font-size: 17px; margin: 0 0 16px; }
+
+/* ---------- Tableaux ---------- */
+
+table.liste { width: 100%; border-collapse: collapse; background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; overflow: hidden; }
+table.liste th, table.liste td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--bord); vertical-align: middle; }
+table.liste th { background: #fafbfd; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--texte-2); }
+table.liste tr:last-child td { border-bottom: none; }
+table.liste tr.non-lu { font-weight: 600; background: #fffdf4; }
+table.liste img.mini { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--bord); }
+
+/* ---------- Formulaires ---------- */
+
+label.champ { display: block; margin-bottom: 14px; font-weight: 600; font-size: 13.5px; }
+label.champ .aide { font-weight: 400; color: var(--texte-2); }
+label.champ input[type="text"],
+label.champ input[type="email"],
+label.champ input[type="password"],
+label.champ input[type="number"],
+label.champ input[type="url"],
+label.champ select,
+label.champ textarea {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  padding: 9px 12px;
+  border: 1px solid var(--bord);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+  color: var(--texte);
+}
+label.champ textarea { resize: vertical; }
+label.champ textarea.code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+label.champ input:focus, label.champ select:focus, label.champ textarea:focus {
+  outline: 2px solid var(--or);
+  outline-offset: 0;
+  border-color: var(--or);
+}
+.champ-inline { display: flex; align-items: center; gap: 8px; font-weight: 500; margin: 12px 0; }
+
+.grille-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+@media (max-width: 900px) {
+  .grille-2 { grid-template-columns: 1fr; }
+  .admin-shell { flex-direction: column; }
+  .admin-sidebar { width: 100%; height: auto; position: static; }
+  .admin-main { padding: 20px; }
+}
+
+/* ---------- Boutons / badges ---------- */
+
+.btn {
+  display: inline-block;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--encre);
+  color: #fff;
+}
+.btn:hover { background: var(--encre-2); text-decoration: none; }
+.btn.principal { background: var(--or); color: #241f10; }
+.btn.principal:hover { background: var(--or-fonce); }
+.btn.secondaire { background: #fff; color: var(--texte); border-color: var(--bord); }
+.btn.secondaire:hover { background: var(--fond); }
+.btn.danger { background: #fff; color: var(--alerte); border-color: #f2c4c1; }
+.btn.danger:hover { background: #fdf1f0; }
+.btn.petit { padding: 5px 10px; font-size: 13px; font-weight: 500; }
+
+.badge { display: inline-block; border-radius: 99px; font-size: 12px; font-weight: 600; padding: 2px 10px; }
+.badge.vert { background: #e6f4e6; color: var(--ok); }
+.badge.gris { background: #ecedf1; color: var(--texte-2); }
+.badge.or { background: #f7efd8; color: #7a6222; }
+.badge.rouge { background: #fdecea; color: var(--alerte); }
+.badge.bleu { background: #e7effd; color: var(--info); }
+
+.actions-ligne { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.actions-ligne form { margin: 0; }
+
+/* ---------- Alertes ---------- */
+
+.notice { border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; font-weight: 500; }
+.notice.ok { background: #e6f4e6; color: var(--ok); }
+.notice.erreur { background: #fdecea; color: var(--alerte); }
+.notice.info { background: #e7effd; color: var(--info); }
+
+/* ---------- Éditeur de blocs ---------- */
+
+.bloc-editeur .bloc {
+  border: 1px solid var(--bord);
+  border-radius: 10px;
+  background: #fafbfd;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.bloc-editeur .bloc-entete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.bloc-editeur .bloc-entete .type { font-weight: 700; font-size: 13px; color: var(--texte-2); text-transform: uppercase; letter-spacing: 0.4px; flex: 1; }
+.bloc-editeur .ajout { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ---------- Connexion ---------- */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--encre);
+}
+.login-box {
+  width: 380px;
+  max-width: calc(100vw - 40px);
+  background: var(--carte);
+  border-radius: 14px;
+  padding: 34px 32px;
+}
+.login-box h1 { margin: 0 0 2px; font-size: 22px; }
+.login-box .sous { color: var(--texte-2); margin: 0 0 22px; font-size: 14px; }
+.login-box .btn { width: 100%; margin-top: 6px; }
+
+/* ---------- Divers ---------- */
+
+.entete-page { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.entete-page h1 { margin: 0; }
+code.slug { background: #eef0f5; border-radius: 6px; padding: 2px 7px; font-size: 13px; }
+.vide { color: var(--texte-2); font-style: italic; padding: 26px 0; text-align: center; }
+.apercu-image { max-width: 180px; max-height: 180px; border-radius: 8px; border: 1px solid var(--bord); display: block; margin-top: 8px; }
