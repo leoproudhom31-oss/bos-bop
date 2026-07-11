@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 export const SESSION_COOKIE = "bosbop_session";
 const SESSION_DURATION_S = 60 * 60 * 24 * 7; // 7 jours
@@ -52,10 +52,40 @@ export async function requireSession(): Promise<SessionPayload> {
   return session;
 }
 
-export const sessionCookieOptions = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
-  path: "/",
-  maxAge: SESSION_DURATION_S,
-};
+/**
+ * Détermine si la connexion courante est en HTTPS, pour savoir si le cookie
+ * de session peut porter l'attribut `Secure`.
+ *
+ * NODE_ENV === "production" n'est PAS un bon indicateur : beaucoup de
+ * déploiements (VPS sans certificat encore configuré, prévisualisation en
+ * HTTP, etc.) tournent en "production" sans TLS. Un cookie marqué `Secure`
+ * envoyé sur une connexion HTTP est silencieusement refusé par le
+ * navigateur : l'utilisateur semble alors se déconnecter à chaque
+ * navigation alors que la connexion a bien réussi côté serveur.
+ *
+ * On se base sur l'en-tête `x-forwarded-proto` (posé par tout reverse proxy
+ * sérieux — Nginx, Vercel, Railway, Fly.io…) puis, à défaut, sur le
+ * protocole de l'URL elle-même.
+ */
+async function isHttpsRequest(): Promise<boolean> {
+  // Permet de forcer explicitement le comportement si l'auto-détection ne
+  // convient pas au déploiement (ex : Next.js exposé directement en HTTPS
+  // par un serveur personnalisé, sans reverse proxy).
+  if (process.env.COOKIE_SECURE === "1") return true;
+  if (process.env.COOKIE_SECURE === "0") return false;
+
+  const store = await headers();
+  const forwardedProto = store.get("x-forwarded-proto");
+  if (forwardedProto) return forwardedProto.split(",")[0].trim() === "https";
+  return false;
+}
+
+export async function getSessionCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: await isHttpsRequest(),
+    path: "/",
+    maxAge: SESSION_DURATION_S,
+  };
+}

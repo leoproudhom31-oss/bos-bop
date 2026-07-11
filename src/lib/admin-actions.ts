@@ -8,7 +8,7 @@ import { prisma } from "./db";
 import {
   requireSession,
   createSessionToken,
-  sessionCookieOptions,
+  getSessionCookieOptions,
   SESSION_COOKIE,
 } from "./auth";
 import { getHeadTemplate } from "./templates";
@@ -54,7 +54,7 @@ export async function loginAction(formData: FormData) {
     email: user.email,
     name: user.name,
   });
-  (await cookies()).set(SESSION_COOKIE, token, sessionCookieOptions);
+  (await cookies()).set(SESSION_COOKIE, token, await getSessionCookieOptions());
   const next = str(formData, "next", 300);
   redirect(next.startsWith("/admin") ? next : "/admin");
 }
@@ -199,6 +199,19 @@ export async function deletePageAction(formData: FormData) {
   }
   revalidatePath("/admin/pages");
   redirect("/admin/pages");
+}
+
+// ---------------------------------------------------------------------------
+// Bannière d'accueil (hero)
+// ---------------------------------------------------------------------------
+
+export async function saveHeroAction(formData: FormData) {
+  await requireSession();
+  await setSetting("heroTitle", str(formData, "heroTitle", 500));
+  await setSetting("heroImageUrl", str(formData, "heroImageUrl", 500));
+  revalidatePath("/admin/accueil");
+  revalidatePath("/");
+  redirect("/admin/accueil?ok=1");
 }
 
 // ---------------------------------------------------------------------------

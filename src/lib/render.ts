@@ -48,11 +48,52 @@ type ShellPage = {
   sharePath: string;
 };
 
+// Filet de sécurité pour le menu mobile (voir le fichier lui-même pour le
+// détail) : ajouté à chaque page, en plus du contenu propre à la page.
+const SAFETY_SCRIPTS = '<script src="/assets/js/scroll-lock-fix.js" defer="defer"></script>';
+
+const HERO_TITLE_RE =
+  /(<h1 class="bd-textblock-20 bd-content-element">)[\s\S]*?(<\/h1>)/;
+const HERO_SLIDE_RE =
+  /<div class="bd-slide-3 bd-textureoverlay bd-textureoverlay-2 bd-slide item active">/;
+
+/**
+ * Personnalise la bannière (hero) de la page d'accueil avec les réglages de
+ * l'administration. Sans réglage renseigné, le HTML reste rigoureusement
+ * identique à celui du site d'origine (voir /admin/accueil).
+ */
+export function applyHeroCustomization(
+  contentHtml: string,
+  hero: { title: string; imageUrl: string },
+): string {
+  let html = contentHtml;
+  if (hero.title.trim()) {
+    const titleHtml = hero.title
+      .split(/\r?\n/)
+      .map((line) => escapeHtml(line.trim()))
+      .filter(Boolean)
+      .join("<br/>");
+    html = html.replace(HERO_TITLE_RE, `$1${titleHtml}$2`);
+  }
+  if (hero.imageUrl.trim()) {
+    const style =
+      `background-image:url('${hero.imageUrl.replaceAll("'", "%27")}');` +
+      "background-repeat:no-repeat;background-position:center top;background-size:cover;";
+    html = html.replace(HERO_SLIDE_RE, (match) => match.replace('active">', `active" style="${style}">`));
+  }
+  return html;
+}
+
 /** Assemble le document HTML complet d'une page (gabarit + contenu + menu). */
 export async function renderDocument(page: ShellPage): Promise<string> {
   const menu = await getMenuEntries();
   const siteUrl = await getSetting("siteUrl", DEFAULT_SITE_URL);
-  return renderShell(getTemplates(), page, menu, { siteUrl });
+  return renderShell(
+    getTemplates(),
+    { ...page, extraTail: page.extraTail + SAFETY_SCRIPTS },
+    menu,
+    { siteUrl },
+  );
 }
 
 /** Rendu d'une page stockée en base. */
@@ -61,6 +102,16 @@ export async function renderPage(
   options: { injectFormMessage?: string } = {},
 ): Promise<string> {
   let contentHtml = page.contentHtml;
+  if (page.slug === "") {
+    const [heroTitle, heroImageUrl] = await Promise.all([
+      getSetting("heroTitle", ""),
+      getSetting("heroImageUrl", ""),
+    ]);
+    contentHtml = applyHeroCustomization(contentHtml, {
+      title: heroTitle,
+      imageUrl: heroImageUrl,
+    });
+  }
   if (options.injectFormMessage) {
     contentHtml = contentHtml.replace(
       '<div class="message-uniform"> </div>',
