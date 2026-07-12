@@ -30,10 +30,15 @@ export default async function PagesListPage() {
         <tbody>
           {pages.map((page) => {
             const path = page.slug === "" ? "/" : `/${page.slug}`;
+            // Pages en blocs -> studio visuel ; pages en HTML brut -> réglages
+            const editHref =
+              page.editorMode === "blocks"
+                ? `/admin/studio/${page.id}`
+                : `/admin/pages/${page.id}`;
             return (
               <tr key={page.id}>
                 <td>
-                  <Link href={`/admin/pages/${page.id}`}>{page.breadcrumbLabel}</Link>{" "}
+                  <Link href={editHref}>{page.breadcrumbLabel}</Link>{" "}
                   {page.isLegacy && <span className="badge bleu">site d&apos;origine</span>}
                 </td>
                 <td>
@@ -49,7 +54,7 @@ export default async function PagesListPage() {
                 </td>
                 <td>
                   <div className="actions-ligne">
-                    <Link href={`/admin/pages/${page.id}`} className="btn secondaire petit">
+                    <Link href={editHref} className="btn secondaire petit">
                       Modifier
                     </Link>
                     <a href={path} target="_blank" rel="noreferrer" className="btn secondaire petit">

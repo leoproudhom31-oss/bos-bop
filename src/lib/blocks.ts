@@ -200,18 +200,45 @@ export function textToHtml(input: string): string {
 
 const SPACER_SIZES: Record<string, string> = { petit: "20px", moyen: "48px", grand: "96px" };
 
-function button(label: string, url: string, newTab = false): string {
+// Options de compilation. En mode "editable" (éditeur sur canvas), chaque bloc
+// reçoit un attribut data-bd-block et chaque champ texte devient éditable
+// (contenteditable + data-bd-field="<chemin>"). En publication, aucune de ces
+// annotations n'est émise : le HXTML publié reste identique.
+export type CompileOptions = { editable?: boolean; blockIndex?: number };
+
+/** Attributs d'édition d'un champ texte (contenteditable + chemin). */
+function fieldAttr(opts: CompileOptions, path: string): string {
+  return opts.editable ? ` contenteditable="true" data-bd-field="${path}"` : "";
+}
+
+/** Attribut de repérage d'un bloc dans l'éditeur. */
+function blockAttr(opts: CompileOptions): string {
+  return opts.editable ? ` data-bd-block="${opts.blockIndex}"` : "";
+}
+
+function button(
+  label: string,
+  url: string,
+  newTab = false,
+  opts: CompileOptions = {},
+  path?: string,
+): string {
   if (!label.trim()) return "";
   const target = newTab ? ' target="_blank"' : "";
   const href = url.trim() || "#";
-  return `<a href="${escapeHtml(href)}"${target} title="${escapeHtml(label)}"> <button>${escapeHtml(label)}</button> </a>`;
+  const ed = path ? fieldAttr(opts, path) : "";
+  return `<a href="${escapeHtml(href)}"${target} title="${escapeHtml(label)}"> <button${ed}>${escapeHtml(label)}</button> </a>`;
 }
 
 /** Bande de contenu standard, reprenant la structure des pages intérieures. */
-function contentSection(inner: string, index: number, extra: { sectionStyle?: string; sectionClass?: string } = {}): string {
+function contentSection(
+  inner: string,
+  opts: CompileOptions,
+  extra: { sectionStyle?: string; sectionClass?: string } = {},
+): string {
   const style = extra.sectionStyle ? ` style="${extra.sectionStyle}"` : "";
   const cls = extra.sectionClass ? ` ${extra.sectionClass}` : "";
-  return `<section class="bd-section-17 bd-tagstyles${cls}" data-section-title="Section" id="bd-block-${index}"${style}>
+  return `<section class="bd-section-17 bd-tagstyles${cls}" data-section-title="Section" id="bd-block-${opts.blockIndex ?? 0}"${style}${blockAttr(opts)}>
 <div class="bd-container-inner bd-margins clearfix">
 <div class="bd-joomlaposition-22 clearfix">
 <div class="bd-block-79 bd-own-margins">
@@ -226,7 +253,8 @@ ${inner}
 </section>`;
 }
 
-function compileHero(block: Extract<Block, { type: "hero" }>, index: number): string {
+function compileHero(block: Extract<Block, { type: "hero" }>, opts: CompileOptions): string {
+  const index = opts.blockIndex ?? 0;
   // background-attachment:scroll (et non "fixed", hérité de .bd-slide-3) :
   // le fond couvre alors toute la hauteur du bloc, sans artefact d'affichage.
   const bg = block.imageUrl.trim()
@@ -237,12 +265,18 @@ function compileHero(block: Extract<Block, { type: "hero" }>, index: number): st
     .map((l) => escapeHtml(l.trim()))
     .filter(Boolean)
     .join("<br/>");
-  const subtitle = block.subtitle.trim()
-    ? `<p class="bd-content-element" style="color:#fff;font-size:20px;margin-top:16px;">${escapeHtml(block.subtitle)}</p>`
-    : "";
-  const btn = button(block.buttonLabel, block.buttonUrl);
+  // En édition, le titre est éditable ligne par ligne : on édite un conteneur
+  // et le parent reconstruit le texte (les <br/> deviennent des retours ligne).
+  const titleInner = opts.editable
+    ? escapeHtml(block.title || "").replaceAll("\n", "<br/>")
+    : titleHtml;
+  const subtitle =
+    block.subtitle.trim() || opts.editable
+      ? `<p class="bd-content-element" style="color:#fff;font-size:20px;margin-top:16px;"${fieldAttr(opts, "subtitle")}>${escapeHtml(block.subtitle)}</p>`
+      : "";
+  const btn = button(block.buttonLabel, block.buttonUrl, false, opts, "buttonLabel");
   const btnHtml = btn ? `<p style="margin-top:20px;">${btn}</p>` : "";
-  return `<section class="bd-section-18 bd-page-width bd-tagstyles" data-section-title="Section" id="bd-hero-${index}">
+  return `<section class="bd-section-18 bd-page-width bd-tagstyles" data-section-title="Section" id="bd-hero-${index}"${blockAttr(opts)}>
 <div class="bd-container-inner bd-margins clearfix">
 <div class="bd-slider-7 bd-page-width bd-slider bd-no-margins carousel slide bd-carousel-fade" id="bd-hero-carousel-${index}">
 <div class="bd-container-inner">
@@ -254,7 +288,7 @@ function compileHero(block: Extract<Block, { type: "hero" }>, index: number): st
 <div class="bd-container-inner">
 <div class="bd-layoutbox-7 bd-no-margins clearfix">
 <div class="bd-container-inner">
-<h1 class="bd-textblock-20 bd-content-element">${titleHtml}</h1>
+<h1 class="bd-textblock-20 bd-content-element"${fieldAttr(opts, "title")}>${titleInner}</h1>
 ${subtitle}
 ${btnHtml}
 </div>
@@ -269,16 +303,26 @@ ${btnHtml}
 </section>`;
 }
 
-function compileBlock(block: Block, index: number): string {
+function compileBlock(block: Block, opts: CompileOptions): string {
+  // En édition, on affiche un texte de remplacement pour un champ vide, afin
+  // que la zone reste cliquable/éditable dans le canvas.
+  const ph = (value: string, placeholder: string) =>
+    opts.editable && !value.trim() ? placeholder : value;
+
   switch (block.type) {
     case "hero":
-      return compileHero(block, index);
+      return compileHero(block, opts);
 
     case "richtext": {
       const tag = block.headingLevel === "h3" ? "h3" : "h2";
-      const heading = block.heading.trim() ? `<${tag}>${escapeHtml(block.heading)}</${tag}>` : "";
+      const headingText = ph(block.heading, "Titre");
+      const heading =
+        headingText.trim() || opts.editable
+          ? `<${tag}${fieldAttr(opts, "heading")}>${escapeHtml(headingText)}</${tag}>`
+          : "";
       const align = block.align !== "left" ? ` style="text-align:${block.align};"` : "";
-      return contentSection(`<div${align}>\n${heading}\n${textToHtml(block.body)}\n</div>`, index);
+      const body = `<div${fieldAttr(opts, "body")}>\n${textToHtml(ph(block.body, "Votre texte…"))}\n</div>`;
+      return contentSection(`<div${align}>\n${heading}\n${body}\n</div>`, opts);
     }
 
     case "columns": {
@@ -286,78 +330,98 @@ function compileBlock(block: Block, index: number): string {
       const span = { 2: 6, 3: 4, 4: 3 }[count] ?? 6;
       const cols = block.columns
         .slice(0, count)
-        .map((col) => {
-          const heading = col.heading.trim() ? `<h3>${escapeHtml(col.heading)}</h3>` : "";
-          return `<div class="col-sm-${span}">\n${heading}\n${textToHtml(col.body)}\n</div>`;
+        .map((col, i) => {
+          const headingText = ph(col.heading, "Titre");
+          const heading =
+            headingText.trim() || opts.editable
+              ? `<h3${fieldAttr(opts, `columns.${i}.heading`)}>${escapeHtml(headingText)}</h3>`
+              : "";
+          return `<div class="col-sm-${span}">\n${heading}\n<div${fieldAttr(opts, `columns.${i}.body`)}>\n${textToHtml(ph(col.body, "Votre texte…"))}\n</div>\n</div>`;
         })
         .join("\n");
-      return contentSection(`<div class="row">\n${cols}\n</div>`, index);
+      return contentSection(`<div class="row">\n${cols}\n</div>`, opts);
     }
 
     case "cards": {
-      const heading = block.heading.trim() ? `<h2>${escapeHtml(block.heading)}</h2>` : "";
-      const intro = textToHtml(block.intro);
+      const headingText = ph(block.heading, "Titre de la section");
+      const heading =
+        headingText.trim() || opts.editable
+          ? `<h2${fieldAttr(opts, "heading")}>${escapeHtml(headingText)}</h2>`
+          : "";
+      const intro =
+        block.intro.trim() || opts.editable
+          ? `<div${fieldAttr(opts, "intro")}>${textToHtml(block.intro)}</div>`
+          : "";
       const count = block.cards.length || 1;
       const span = count >= 4 ? 3 : count === 3 ? 4 : count === 2 ? 6 : 12;
       const cards = block.cards
         .map((card, i) => {
           const cls = `bloc-${(i % 4) + 1}`;
-          const title = card.title.trim() ? `<p class="titre-bloc">${escapeHtml(card.title)}</p>` : "";
+          const title = `<p class="titre-bloc"${fieldAttr(opts, `cards.${i}.title`)}>${escapeHtml(ph(card.title, "Titre"))}</p>`;
           return `<div class="col-sm-${span}">
 <div class="${cls}" style="height:auto;">
 ${title}
-${textToHtml(card.body)}
+<div${fieldAttr(opts, `cards.${i}.body`)}>${textToHtml(ph(card.body, "Texte…"))}</div>
 </div>
 </div>`;
         })
         .join("\n");
-      return contentSection(`${heading}\n${intro}\n<div class="row">\n${cards}\n</div>`, index);
+      return contentSection(`${heading}\n${intro}\n<div class="row">\n${cards}\n</div>`, opts);
     }
 
     case "imageText": {
       const img = block.imageUrl.trim()
         ? `<img alt="${escapeHtml(block.heading)}" src="${escapeHtml(block.imageUrl)}" style="max-width:100%;height:auto;"/>`
         : '<div style="background:#eef0f5;border-radius:6px;height:220px;"></div>';
-      const heading = block.heading.trim() ? `<h2>${escapeHtml(block.heading)}</h2>` : "";
-      const btn = button(block.buttonLabel, block.buttonUrl);
-      const textCol = `<div class="col-sm-6">\n${heading}\n${textToHtml(block.body)}\n${btn ? `<p>${btn}</p>` : ""}\n</div>`;
+      const heading = `<h2${fieldAttr(opts, "heading")}>${escapeHtml(ph(block.heading, "Titre"))}</h2>`;
+      const btn = button(block.buttonLabel, block.buttonUrl, false, opts, "buttonLabel");
+      const textCol = `<div class="col-sm-6">\n${heading}\n<div${fieldAttr(opts, "body")}>\n${textToHtml(ph(block.body, "Votre texte…"))}\n</div>\n${btn ? `<p>${btn}</p>` : ""}\n</div>`;
       const imgCol = `<div class="col-sm-6">\n<p>${img}</p>\n</div>`;
       const inner = block.imagePosition === "right" ? textCol + "\n" + imgCol : imgCol + "\n" + textCol;
-      return contentSection(`<div class="row bd-row-flex bd-row-align-middle">\n${inner}\n</div>`, index);
+      return contentSection(`<div class="row bd-row-flex bd-row-align-middle">\n${inner}\n</div>`, opts);
     }
 
     case "image": {
       if (!block.url.trim()) {
-        return contentSection('<p style="text-align:center;"><em>Aucune image sélectionnée.</em></p>', index);
+        // Sur le site publié, un bloc image vide n'affiche rien.
+        if (!opts.editable) return "";
+        return contentSection(
+          '<p style="text-align:center;color:#9aa1b5;"><em>Cliquez pour choisir une image (panneau de droite).</em></p>',
+          opts,
+        );
       }
       const width = /^\d{1,3}$/.test(block.width) ? `${block.width}%` : "100%";
       return contentSection(
         `<p style="text-align:${block.align};"><img alt="${escapeHtml(block.alt)}" src="${escapeHtml(block.url)}" style="max-width:${width};height:auto;"/></p>`,
-        index,
+        opts,
       );
     }
 
     case "cta": {
-      const heading = block.heading.trim() ? `<h2 style="color:#dec076;">${escapeHtml(block.heading)}</h2>` : "";
-      const body = block.body.trim() ? `<p style="color:#fff;">${escapeHtml(block.body)}</p>` : "";
-      const btn = button(block.buttonLabel, block.buttonUrl);
+      const heading = `<h2 style="color:#dec076;"${fieldAttr(opts, "heading")}>${escapeHtml(ph(block.heading, "Titre"))}</h2>`;
+      const body = `<p style="color:#fff;"${fieldAttr(opts, "body")}>${escapeHtml(ph(block.body, "Votre texte…"))}</p>`;
+      const btn = button(block.buttonLabel, block.buttonUrl, false, opts, "buttonLabel");
       const inner = `<div style="text-align:center;padding:20px 0;">\n${heading}\n${body}\n${btn ? `<p style="margin-top:16px;">${btn}</p>` : ""}\n</div>`;
-      return contentSection(inner, index, { sectionStyle: "background-color:#223352;" });
+      return contentSection(inner, opts, { sectionStyle: "background-color:#223352;" });
     }
 
     case "button": {
-      const btn = button(block.label, block.url, block.newTab);
-      return contentSection(`<p style="text-align:${block.align};">${btn}</p>`, index);
+      const btn = button(ph(block.label, "Bouton"), block.url, block.newTab, opts, "label");
+      return contentSection(`<p style="text-align:${block.align};">${btn}</p>`, opts);
     }
 
     case "spacer":
-      return `<div style="height:${SPACER_SIZES[block.size] ?? "48px"};" aria-hidden="true"></div>`;
+      return `<div style="height:${SPACER_SIZES[block.size] ?? "48px"};"${blockAttr(opts)} aria-hidden="true"></div>`;
 
     case "separator":
-      return contentSection('<hr style="border:none;border-top:1px solid #d9dce3;"/>', index);
+      return contentSection('<hr style="border:none;border-top:1px solid #d9dce3;"/>', opts);
 
     case "html":
-      // Émis verbatim : préserve à l'identique le contenu des pages d'origine.
+      // Publication : émis verbatim (préserve à l'identique les pages d'origine).
+      // Édition : enveloppé pour être sélectionnable dans le canvas.
+      if (opts.editable) {
+        return `<div${blockAttr(opts)} class="bd-html-block">${block.html ?? ""}</div>`;
+      }
       return block.html ?? "";
 
     default:
@@ -365,11 +429,18 @@ ${textToHtml(card.body)}
   }
 }
 
-/** Compile la liste de blocs vers le contenu principal d'une page. */
+/** Compile la liste de blocs vers le contenu principal d'une page (publication). */
 export function compileBlocks(blocks: Block[]): string {
   return blocks
-    .map((block, index) => compileBlock(block, index + 1))
+    .map((block, index) => compileBlock(block, { blockIndex: index + 1 }))
     .filter((html) => html.trim() !== "")
+    .join("\n");
+}
+
+/** Compile la liste de blocs pour l'éditeur (avec annotations d'édition). */
+export function compileBlocksEditable(blocks: Block[]): string {
+  return blocks
+    .map((block, index) => compileBlock(block, { editable: true, blockIndex: index }))
     .join("\n");
 }
 

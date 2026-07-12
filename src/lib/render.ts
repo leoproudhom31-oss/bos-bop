@@ -4,6 +4,7 @@ import { getTemplates, getHeadTemplate } from "./templates";
 import { getSetting, DEFAULT_SITE_URL } from "./settings";
 // Module JavaScript partagé avec le script d'extraction/vérification
 import { renderShell, escapeHtml } from "./shell.mjs";
+import { editorScriptHtml } from "./editor-script";
 
 export const HTML_HEADERS = {
   "content-type": "text/html; charset=utf-8",
@@ -166,11 +167,18 @@ export async function renderPreview(options: {
   contentHtml: string;
   isHome: boolean;
   hero?: { title: string; imageUrl: string };
+  /** Injecte le script d'édition sur canvas (studio). */
+  editor?: boolean;
 }): Promise<string> {
   let contentHtml = options.contentHtml;
   if (options.isHome && options.hero) {
     contentHtml = applyHeroCustomization(contentHtml, options.hero);
   }
+  if (options.editor && !contentHtml.trim()) {
+    contentHtml =
+      '<div class="bd-ed-empty">Page vide — cliquez sur « Ajouter un bloc » pour commencer.</div>';
+  }
+  const extraTail = options.editor ? editorScriptHtml() : "";
   return renderDocument({
     slug: options.isHome ? "" : "apercu",
     title: "Aperçu" + TITLE_SUFFIX,
@@ -181,7 +189,7 @@ export async function renderPreview(options: {
       : INNER_BODY_CLASS,
     headHtml: getHeadTemplate(),
     contentHtml,
-    extraTail: "",
+    extraTail,
     breadcrumbLabel: "Aperçu",
     sharePath: "/apercu",
   });

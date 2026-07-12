@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { compileBlocks, parseBlocksJson } from "@/lib/blocks";
+import { compileBlocks, compileBlocksEditable, parseBlocksJson } from "@/lib/blocks";
 import { renderPreview, HTML_HEADERS } from "@/lib/render";
 
 export const dynamic = "force-dynamic";
@@ -19,16 +19,19 @@ export async function POST(request: NextRequest) {
   }
 
   const isHome = body.isHome === true;
+  const editor = body.editor === true;
   let contentHtml = "";
   if (body.mode === "html" && typeof body.contentHtml === "string") {
     contentHtml = body.contentHtml;
   } else if (Array.isArray(body.blocks)) {
-    contentHtml = compileBlocks(parseBlocksJson(JSON.stringify(body.blocks)));
+    const blocks = parseBlocksJson(JSON.stringify(body.blocks));
+    contentHtml = editor ? compileBlocksEditable(blocks) : compileBlocks(blocks);
   }
 
   const html = await renderPreview({
     contentHtml,
     isHome,
+    editor,
     hero:
       typeof body.heroTitle === "string" || typeof body.heroImageUrl === "string"
         ? { title: body.heroTitle ?? "", imageUrl: body.heroImageUrl ?? "" }

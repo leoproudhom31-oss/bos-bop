@@ -136,7 +136,8 @@ export async function createPageAction(formData: FormData) {
   }
 
   revalidatePath("/admin/pages");
-  redirect(`/admin/pages/${page.id}`);
+  // Ouvre directement le studio d'édition immersif
+  redirect(`/admin/studio/${page.id}`);
 }
 
 export async function updatePageAction(formData: FormData) {
@@ -201,7 +202,8 @@ export async function convertPageToBuilderAction(formData: FormData) {
       data: { editorMode: "blocks", blocksJson: JSON.stringify(blocks) },
     });
   }
-  redirect(`/admin/pages/${id}?converti=1`);
+  // Ouvre le studio d'édition immersif
+  redirect(`/admin/studio/${id}`);
 }
 
 /** Repasse une page en mode HTML brut (édition avancée). */
