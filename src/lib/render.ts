@@ -156,6 +156,37 @@ export async function renderVirtualPage(options: {
   });
 }
 
+/**
+ * Rendu d'aperçu pour l'administration : contenu fourni (déjà compilé) rendu
+ * dans l'habillage complet du site. Utilisé par l'aperçu en direct du
+ * constructeur de pages — c'est exactement le même pipeline que la
+ * publication, donc l'aperçu est fidèle (WYSIWYG).
+ */
+export async function renderPreview(options: {
+  contentHtml: string;
+  isHome: boolean;
+  hero?: { title: string; imageUrl: string };
+}): Promise<string> {
+  let contentHtml = options.contentHtml;
+  if (options.isHome && options.hero) {
+    contentHtml = applyHeroCustomization(contentHtml, options.hero);
+  }
+  return renderDocument({
+    slug: options.isHome ? "" : "apercu",
+    title: "Aperçu" + TITLE_SUFFIX,
+    metaDescription: "",
+    metaKeywords: "",
+    bodyClass: options.isHome
+      ? "bootstrap bd-body-1 bd-homepage bd-pagebackground-49 bd-margins"
+      : INNER_BODY_CLASS,
+    headHtml: getHeadTemplate(),
+    contentHtml,
+    extraTail: "",
+    breadcrumbLabel: "Aperçu",
+    sharePath: "/apercu",
+  });
+}
+
 /** Page 404 habillée comme le site. */
 export async function renderNotFound(): Promise<Response> {
   const contentHtml = `

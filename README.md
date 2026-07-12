@@ -79,12 +79,9 @@ sont redirigées en 301 — voir `next.config.ts`.
 ## Administration (`/admin`)
 
 - **Pages** : modification des pages existantes (SEO + contenu), création de
-  nouvelles pages avec l'habillage complet du site.
-  - *Générateur de blocs* (recommandé) : titres, paragraphes, deux colonnes,
-    images (téléversement intégré), boutons, espacements — compilés vers le
-    balisage du template d'origine, aucune connaissance HTML requise.
-  - *Mode HTML libre* pour les utilisateurs avancés. Les 6 pages issues de
-    Joomla sont en mode HTML et protégées contre la suppression.
+  nouvelles pages avec l'habillage complet du site — voir le *constructeur
+  visuel* ci-dessous.
+- **Bannière d'accueil** : titre et image de fond du grand bandeau.
 - **Menu du site** : ordre, libellés, ajout d'entrées (pages ou URL libres).
 - **Messages** : le formulaire de contact d'origine enregistre désormais les
   demandes en base (plus de dépendance au composant Joomla) ; consultation,
@@ -92,6 +89,35 @@ sont redirigées en 301 — voir `next.config.ts`.
 - **Livres** : catalogue (titre, auteur, prix, stock, couverture, description).
 - **Commandes** : suivi (Nouvelle → Confirmée → Expédiée / Annulée).
 - **Réglages** : URL publique, activation de la boutique, mot de passe.
+
+## Constructeur de pages visuel (« à la Wix »)
+
+Les pages sont éditées dans un **constructeur visuel** avec **aperçu en direct** :
+l'écran est scindé en deux, l'éditeur de blocs à gauche et le rendu réel du
+site à droite (dans une iframe), mis à jour à chaque modification. L'aperçu
+utilise exactement le même moteur de rendu que la publication : ce que vous
+voyez est ce qui sera publié.
+
+- **Blocs disponibles** : bannière (hero), titre + texte, appel à l'action,
+  bouton, image, image + texte, colonnes (2/3/4), cartes colorées (style
+  « méthode 360° »), espacement, séparateur, et HTML avancé. Chaque bloc est
+  compilé vers le balisage du template d'origine (mêmes polices, couleurs,
+  cartes, boutons) : le résultat reste cohérent avec le reste du site.
+- **Manipulation** : ajout via une palette, réorganisation par glisser-déposer
+  (ou flèches ↑/↓), duplication, suppression — sans écrire de HTML.
+- **Modèles de démarrage** : à la création, choisissez un modèle (Page vierge,
+  Présentation, Prestation, Page d'atterrissage) pré-rempli de blocs.
+- **Images** : téléversées directement depuis les blocs (dans `public/uploads/`).
+- **Édition des pages existantes** : chaque page du site d'origine peut être
+  ouverte dans le constructeur (bouton « Ouvrir dans le constructeur visuel »).
+  Son contenu historique est **préservé à l'identique** dans un bloc « HTML
+  avancé » — le rendu publié ne change pas tant que rien n'est modifié — et
+  l'on peut ajouter des blocs visuels autour. Un retour au « HTML brut » reste
+  possible pour un contrôle fin du code.
+
+Techniquement : les blocs sont stockés en JSON (`Page.blocksJson`) et compilés
+côté serveur (`src/lib/blocks.ts`) ; l'aperçu passe par `POST /api/admin/preview`
+qui réutilise le pipeline de rendu réel (`renderPreview`).
 
 ## Boutique (prémisses e-commerce)
 

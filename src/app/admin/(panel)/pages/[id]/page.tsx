@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { updatePageAction } from "@/lib/admin-actions";
+import {
+  updatePageAction,
+  convertPageToBuilderAction,
+  convertPageToHtmlAction,
+} from "@/lib/admin-actions";
 import { parseBlocksJson } from "@/lib/blocks";
-import { BlockEditor } from "@/components/admin/BlockEditor";
+import { PageBuilder } from "@/components/admin/PageBuilder";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +19,16 @@ export default async function EditPagePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string; erreur?: string }>;
+  searchParams: Promise<{ ok?: string; erreur?: string; converti?: string }>;
 }) {
   const { id } = await params;
-  const { ok, erreur } = await searchParams;
+  const { ok, erreur, converti } = await searchParams;
   const page = await prisma.page.findUnique({ where: { id: Number(id) } });
   if (!page) notFound();
 
   const path = page.slug === "" ? "/" : `/${page.slug}`;
+  const isBuilder = page.editorMode === "blocks";
+  const isHome = page.slug === "";
 
   return (
     <>
@@ -34,6 +40,12 @@ export default async function EditPagePage({
       </div>
 
       {ok && <div className="notice ok">Page enregistrée.</div>}
+      {converti && (
+        <div className="notice ok">
+          Page ouverte dans le constructeur visuel. Votre contenu d&apos;origine est préservé dans le
+          bloc « HTML avancé » : ajoutez des blocs autour et enregistrez quand vous êtes prêt.
+        </div>
+      )}
       {erreur && <div className="notice erreur">{ERRORS[erreur] ?? "Erreur inconnue."}</div>}
       {!page.published && (
         <div className="notice info">
@@ -82,10 +94,16 @@ export default async function EditPagePage({
           {page.slug === "" && <input type="hidden" name="published" value="1" />}
         </div>
 
-        <div className="panel">
-          <h2>Contenu</h2>
-          {page.editorMode === "blocks" ? (
-            <BlockEditor initialBlocks={parseBlocksJson(page.blocksJson)} />
+        <div className="panel panel-large">
+          <div className="panel-entete">
+            <h2>Contenu de la page</h2>
+            {isBuilder && (
+              <span className="aide">Constructeur visuel — glissez, modifiez, l&apos;aperçu se met à jour en direct.</span>
+            )}
+          </div>
+
+          {isBuilder ? (
+            <PageBuilder initialBlocks={parseBlocksJson(page.blocksJson)} isHome={isHome} />
           ) : (
             <label className="champ">
               HTML de la page{" "}
@@ -102,6 +120,39 @@ export default async function EditPagePage({
           Enregistrer
         </button>
       </form>
+
+      {/* Bascule entre constructeur visuel et HTML brut, en dehors du formulaire principal */}
+      <div className="panel" style={{ marginTop: 22 }}>
+        <h2>Mode d&apos;édition</h2>
+        {isBuilder ? (
+          <>
+            <p className="subtitle">
+              Vous éditez cette page avec le <strong>constructeur visuel</strong>. Pour un contrôle
+              fin du code, vous pouvez repasser en HTML brut.
+            </p>
+            <form action={convertPageToHtmlAction}>
+              <input type="hidden" name="id" value={page.id} />
+              <button type="submit" className="btn secondaire">
+                Repasser en HTML brut
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <p className="subtitle">
+              Cette page est éditée en <strong>HTML brut</strong>. Ouvrez-la dans le constructeur
+              visuel pour la modifier plus facilement : votre contenu actuel sera préservé et vous
+              pourrez ajouter des blocs par-dessus, avec aperçu en direct.
+            </p>
+            <form action={convertPageToBuilderAction}>
+              <input type="hidden" name="id" value={page.id} />
+              <button type="submit" className="btn principal">
+                ✨ Ouvrir dans le constructeur visuel
+              </button>
+            </form>
+          </>
+        )}
+      </div>
     </>
   );
 }

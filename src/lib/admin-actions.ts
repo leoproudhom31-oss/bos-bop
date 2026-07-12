@@ -14,7 +14,7 @@ import {
 import { getHeadTemplate } from "./templates";
 import { TITLE_SUFFIX, INNER_BODY_CLASS } from "./render";
 import { setSetting } from "./settings";
-import { compileBlocks, parseBlocksJson } from "./blocks";
+import { compileBlocks, parseBlocksJson, PAGE_TEMPLATE_BY_ID } from "./blocks";
 
 const str = (form: FormData, name: string, max = 5000): string => {
   const value = form.get(name);
@@ -97,7 +97,15 @@ export async function createPageAction(formData: FormData) {
     redirect("/admin/pages/new?erreur=slug-existe");
   }
 
-  const editorMode = str(formData, "editorMode") === "html" ? "html" : "blocks";
+  // Blocs initiaux issus du modèle choisi ("création ludique et rapide")
+  const template = PAGE_TEMPLATE_BY_ID[str(formData, "template", 40)] ?? PAGE_TEMPLATE_BY_ID["vierge"];
+  const initialBlocks = template.blocks();
+  // Le premier bloc « titre + texte » d'un modèle reprend le nom de la page
+  const firstRichtext = initialBlocks.find((b) => b.type === "richtext");
+  if (firstRichtext && firstRichtext.type === "richtext" && template.id === "vierge") {
+    firstRichtext.heading = name;
+  }
+
   const page = await prisma.page.create({
     data: {
       slug,
@@ -107,12 +115,9 @@ export async function createPageAction(formData: FormData) {
       bodyClass: INNER_BODY_CLASS,
       headHtml: getHeadTemplate(),
       sharePath: `/${slug}.html`,
-      editorMode,
-      blocksJson: JSON.stringify([
-        { type: "titre", level: "h2", text: name },
-        { type: "texte", html: "" },
-      ]),
-      contentHtml: compileBlocks([{ type: "titre", level: "h2", text: name }]),
+      editorMode: "blocks",
+      blocksJson: JSON.stringify(initialBlocks),
+      contentHtml: compileBlocks(initialBlocks),
       published: false,
       isLegacy: false,
     },
@@ -172,7 +177,44 @@ export async function updatePageAction(formData: FormData) {
 
   await prisma.page.update({ where: { id }, data });
   revalidatePath("/admin/pages");
+  // Rafraîchit la page publique correspondante
+  const publicPath = (data.slug ?? page.slug) === "" ? "/" : `/${data.slug ?? page.slug}`;
+  revalidatePath(publicPath);
   redirect(`/admin/pages/${id}?ok=1`);
+}
+
+/**
+ * Ouvre une page en mode "constructeur visuel". Le contenu existant est
+ * préservé tel quel dans un unique bloc HTML : le rendu publié reste
+ * strictement identique tant que l'utilisateur ne modifie rien. Il peut
+ * ensuite ajouter des blocs visuels autour, avec aperçu en direct.
+ */
+export async function convertPageToBuilderAction(formData: FormData) {
+  await requireSession();
+  const id = Number(formData.get("id"));
+  const page = await prisma.page.findUnique({ where: { id } });
+  if (!page) redirect("/admin/pages");
+  if (page.editorMode !== "blocks") {
+    const blocks = [{ type: "html", html: page.contentHtml }];
+    await prisma.page.update({
+      where: { id },
+      data: { editorMode: "blocks", blocksJson: JSON.stringify(blocks) },
+    });
+  }
+  redirect(`/admin/pages/${id}?converti=1`);
+}
+
+/** Repasse une page en mode HTML brut (édition avancée). */
+export async function convertPageToHtmlAction(formData: FormData) {
+  await requireSession();
+  const id = Number(formData.get("id"));
+  const page = await prisma.page.findUnique({ where: { id } });
+  if (!page) redirect("/admin/pages");
+  await prisma.page.update({
+    where: { id },
+    data: { editorMode: "html" },
+  });
+  redirect(`/admin/pages/${id}`);
 }
 
 export async function togglePagePublishedAction(formData: FormData) {
