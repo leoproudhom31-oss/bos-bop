@@ -90,34 +90,43 @@ sont redirigées en 301 — voir `next.config.ts`.
 - **Commandes** : suivi (Nouvelle → Confirmée → Expédiée / Annulée).
 - **Réglages** : URL publique, activation de la boutique, mot de passe.
 
-## Constructeur de pages visuel (« à la Wix »)
+## Studio d'édition visuel (« à la Wix »)
 
-Les pages sont éditées dans un **constructeur visuel** avec **aperçu en direct** :
-l'écran est scindé en deux, l'éditeur de blocs à gauche et le rendu réel du
-site à droite (dans une iframe), mis à jour à chaque modification. L'aperçu
-utilise exactement le même moteur de rendu que la publication : ce que vous
-voyez est ce qui sera publié.
+Créer ou modifier une page ouvre un **studio plein écran** (route
+`/admin/studio/[id]`), un espace de création immersif — sans l'habillage de
+l'administration. On y **modifie directement le rendu réel du site** :
 
+- **Édition directe sur la page** : cliquez sur un titre, un paragraphe, un
+  libellé de bouton dans l'aperçu et tapez — le texte se modifie sur place. Le
+  rendu affiché est exactement celui qui sera publié (même moteur de rendu).
+- **Sélection de bloc** : cliquer un bloc l'entoure et fait apparaître une
+  barre d'outils flottante (monter, descendre, dupliquer, réglages, supprimer)
+  ainsi qu'un **inspecteur** à droite pour toutes ses options (image,
+  alignement, nombre de colonnes, liens de bouton, cartes…).
+- **Insertion** : des pastilles « + » entre les blocs ouvrent une palette pour
+  insérer un nouveau bloc à l'endroit voulu.
+- **Aperçu appareil** : bascule ordinateur / mobile. Enregistrement sans
+  quitter le studio (bouton Enregistrer ou Ctrl/Cmd+S), interrupteur
+  Publié/Brouillon, et tiroir « Paramètres » (nom, adresse, SEO).
 - **Blocs disponibles** : bannière (hero), titre + texte, appel à l'action,
   bouton, image, image + texte, colonnes (2/3/4), cartes colorées (style
-  « méthode 360° »), espacement, séparateur, et HTML avancé. Chaque bloc est
+  « méthode 360° »), espacement, séparateur, HTML avancé. Chaque bloc est
   compilé vers le balisage du template d'origine (mêmes polices, couleurs,
-  cartes, boutons) : le résultat reste cohérent avec le reste du site.
-- **Manipulation** : ajout via une palette, réorganisation par glisser-déposer
-  (ou flèches ↑/↓), duplication, suppression — sans écrire de HTML.
+  cartes, boutons).
 - **Modèles de démarrage** : à la création, choisissez un modèle (Page vierge,
   Présentation, Prestation, Page d'atterrissage) pré-rempli de blocs.
-- **Images** : téléversées directement depuis les blocs (dans `public/uploads/`).
 - **Édition des pages existantes** : chaque page du site d'origine peut être
-  ouverte dans le constructeur (bouton « Ouvrir dans le constructeur visuel »).
-  Son contenu historique est **préservé à l'identique** dans un bloc « HTML
-  avancé » — le rendu publié ne change pas tant que rien n'est modifié — et
-  l'on peut ajouter des blocs visuels autour. Un retour au « HTML brut » reste
-  possible pour un contrôle fin du code.
+  ouverte dans le studio (« Ouvrir dans le studio visuel »). Son contenu
+  historique est **préservé à l'identique** dans un bloc « HTML avancé » — le
+  rendu publié ne change pas tant que rien n'est modifié — et l'on peut ajouter
+  des blocs autour.
 
 Techniquement : les blocs sont stockés en JSON (`Page.blocksJson`) et compilés
-côté serveur (`src/lib/blocks.ts`) ; l'aperçu passe par `POST /api/admin/preview`
-qui réutilise le pipeline de rendu réel (`renderPreview`).
+côté serveur (`src/lib/blocks.ts`). L'aperçu/édition passe par
+`POST /api/admin/preview` (le mode éditeur ajoute les annotations
+`data-bd-block` / `contenteditable` et injecte `src/lib/editor-script.ts` dans
+l'iframe) ; la sauvegarde se fait via `PUT /api/admin/pages/[id]`. Les
+annotations n'existent qu'en édition : le HTML publié en est totalement exempt.
 
 ## Boutique (prémisses e-commerce)
 
