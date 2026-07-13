@@ -11,7 +11,8 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "extract:legacy": "node scripts/extract-legacy.mjs"
+    "extract:legacy": "node scripts/extract-legacy.mjs && node scripts/decompose-legacy.mjs",
+    "decompose:legacy": "node scripts/decompose-legacy.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -9,14 +9,16 @@
  * chaque exécution (source de vérité initiale). Après la mise en production,
  * ne plus relancer le seed si le contenu a été modifié dans l'administration.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { compileBlocks, parseBlocksJson } from "../src/lib/blocks";
 
 const prisma = new PrismaClient();
 const root = process.cwd();
 const readContent = (rel: string) => readFileSync(join(root, "content", rel), "utf-8");
+const contentExists = (rel: string) => existsSync(join(root, "content", rel));
 
 type PageMeta = {
   slug: string;
@@ -42,7 +44,26 @@ async function main() {
   const pages: PageMeta[] = JSON.parse(readContent("pages.json"));
   for (const meta of pages) {
     const headHtml = readContent(`heads/${meta.name}.html`);
-    const contentHtml = readContent(`pages/${meta.name}.html`);
+    const originalHtml = readContent(`pages/${meta.name}.html`);
+
+    // Pages migrées converties en « blocs » (découpage par bande, fidèle à
+    // l'octet — voir scripts/decompose-legacy.mjs). Repli en HTML brut si le
+    // découpage n'est pas disponible.
+    let editorMode = "html";
+    let blocksJson = "[]";
+    let contentHtml = originalHtml;
+    if (contentExists(`blocks/${meta.name}.json`)) {
+      const blocks = parseBlocksJson(readContent(`blocks/${meta.name}.json`));
+      const recompiled = compileBlocks(blocks);
+      if (recompiled === originalHtml) {
+        editorMode = "blocks";
+        blocksJson = JSON.stringify(blocks);
+        contentHtml = recompiled; // strictement identique à l'original
+      } else {
+        console.warn(`  ⚠ blocs/${meta.name} non fidèles : maintien en HTML brut`);
+      }
+    }
+
     const data = {
       title: meta.title,
       breadcrumbLabel: meta.breadcrumbLabel,
@@ -52,7 +73,8 @@ async function main() {
       headHtml,
       sharePath: meta.sharePath,
       contentHtml,
-      editorMode: "html",
+      blocksJson,
+      editorMode,
       published: true,
       isLegacy: true,
     };
