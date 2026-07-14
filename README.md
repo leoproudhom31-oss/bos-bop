@@ -54,9 +54,12 @@ passe).
 
 ### Production
 
+Premier déploiement :
+
 ```bash
-npm run build
-npm start                 # ou pm2 start npm -- start
+npm install
+npm run deploy             # prisma generate + db push + seed + build
+pm2 start npm --name bos-bop -- start
 ```
 
 À prévoir sur le serveur :
@@ -69,6 +72,36 @@ npm start                 # ou pm2 start npm -- start
   `https://www.bos-bop.fr/templates/juillet2019/images/designer/…Fichier1.png` ;
   copier ce fichier du site actuel avant la bascule DNS (même chemin) ou
   adapter la balise dans `content/heads/*.html` puis relancer le seed.
+
+### Mise à jour du site (nouveau code, nouvelles pages)
+
+```bash
+git pull
+npm install
+npm run deploy              # crée les pages/menus manquants, ne touche jamais au reste
+pm2 restart bos-bop --update-env
+```
+
+`npm run deploy` (donc `npm run db:seed`) est **sans risque à relancer à
+chaque mise à jour** : par défaut il ne fait que créer les pages ou entrées de
+menu qui n'existent pas encore (ex. une page ajoutée dans `content/`) et ne
+touche jamais au contenu déjà présent — vos modifications faites depuis
+l'administration sont donc toujours préservées.
+
+**Ne jamais supprimer `prisma/*.db`** pour « forcer » une mise à jour : c'est
+la base de production (pages, messages, commandes, comptes…), pas un cache.
+La supprimer réinitialise entièrement le site (d'où le « page non trouvée »
+généralisé si le seed n'est pas relancé juste après). Si vous voulez
+explicitement resynchroniser le contenu des 6 pages migrées depuis le dépôt
+(par exemple après une correction de mise en forme) :
+
+```bash
+RESEED_LEGACY_CONTENT=1 npm run db:seed
+```
+
+Les correctifs purement visuels (icônes, styles) ne nécessitent eux aucune
+étape de seed : ils sont injectés au rendu et s'appliquent automatiquement
+dès que le nouveau code est déployé.
 
 ### Reprise du référencement
 
