@@ -146,13 +146,16 @@ Le paiement en ligne (Stripe…) pourra se brancher dans
 ```
 legacy/            dump du site Joomla d'origine (référence, non servi)
 templates/         gabarits communs extraits (header, footer, <head>…)
-content/           contenu par page extrait (utilisé par le seed)
-scripts/           extract-legacy.mjs : extraction + vérification octet à octet
+content/           contenu par page extrait : HTML, blocs, menu (seed)
+scripts/           extract-legacy.mjs (vérification octet) + decompose-legacy.mjs
 prisma/            schéma, seed, base SQLite
 public/assets/     CSS/JS/images du template Joomla, servis à l'identique
+                   (cache HTTP immuable : noms préfixés par un hash de contenu)
+public/js/         scripts propres au nouveau site (scroll-manager.js)
 public/uploads/    fichiers téléversés depuis l'administration
 src/app/           routes : pages publiques (route handlers), /admin, /api
-src/lib/           rendu, blocs, panier, auth, actions d'administration
+src/lib/           rendu, blocs, panier, auth, constantes partagées
+src/lib/actions/   actions d'administration, un module par domaine
 src/components/    composants React de l'administration
 ```
 
@@ -169,3 +172,11 @@ src/components/    composants React de l'administration
   (domaine bos-bop.fr). Le serveur enregistre les messages sans vérification
   côté serveur pour l'instant ; brancher la vérification dans
   `src/app/api/contact/route.ts` si du spam apparaît.
+- **Défilement** : le template d'origine fige la page (`position:fixed` sur
+  `<html>`) pendant l'ouverture du menu mobile et ne la libère qu'en fin
+  d'animation. `public/js/scroll-manager.js` libère le défilement dès le début
+  de la fermeture et surveille les états bloqués par MutationObserver
+  (aucune boucle de scrutation). Le comportement visible est inchangé.
+- **Cache HTTP** : les fichiers de `public/assets/` (noms hashés) et
+  `public/uploads/` (noms horodatés) sont servis avec
+  `Cache-Control: immutable` (voir `next.config.ts`).

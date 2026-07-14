@@ -230,15 +230,18 @@ function button(
   return `<a href="${escapeHtml(href)}"${target} title="${escapeHtml(label)}"> <button${ed}>${escapeHtml(label)}</button> </a>`;
 }
 
-/** Bande de contenu standard, reprenant la structure des pages intérieures. */
-function contentSection(
+/**
+ * Bande de contenu générique du site (structure des pages intérieures du
+ * template d'origine). Partagée entre le compilateur de blocs et les vues
+ * boutique pour n'avoir qu'une seule définition de ce balisage.
+ */
+export function sectionShell(
   inner: string,
-  opts: CompileOptions,
-  extra: { sectionStyle?: string; sectionClass?: string } = {},
+  opts: { id: string; sectionClass?: string; sectionStyle?: string; extraAttrs?: string } = { id: "section17" },
 ): string {
-  const style = extra.sectionStyle ? ` style="${extra.sectionStyle}"` : "";
-  const cls = extra.sectionClass ? ` ${extra.sectionClass}` : "";
-  return `<section class="bd-section-17 bd-tagstyles${cls}" data-section-title="Section" id="bd-block-${opts.blockIndex ?? 0}"${style}${blockAttr(opts)}>
+  const cls = opts.sectionClass ? ` ${opts.sectionClass}` : "";
+  const style = opts.sectionStyle ? ` style="${opts.sectionStyle}"` : "";
+  return `<section class="bd-section-17 bd-tagstyles${cls}" data-section-title="Section" id="${opts.id}"${style}${opts.extraAttrs ?? ""}>
 <div class="bd-container-inner bd-margins clearfix">
 <div class="bd-joomlaposition-22 clearfix">
 <div class="bd-block-79 bd-own-margins">
@@ -251,6 +254,20 @@ ${inner}
 </div>
 </div>
 </section>`;
+}
+
+/** Bande de contenu d'un bloc du constructeur. */
+function contentSection(
+  inner: string,
+  opts: CompileOptions,
+  extra: { sectionStyle?: string; sectionClass?: string } = {},
+): string {
+  return sectionShell(inner, {
+    id: `bd-block-${opts.blockIndex ?? 0}`,
+    sectionClass: extra.sectionClass,
+    sectionStyle: extra.sectionStyle,
+    extraAttrs: blockAttr(opts),
+  });
 }
 
 function compileHero(block: Extract<Block, { type: "hero" }>, opts: CompileOptions): string {

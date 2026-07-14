@@ -1,4 +1,5 @@
-import { getSetting, DEFAULT_SITE_URL } from "@/lib/settings";
+import { getSetting } from "@/lib/settings";
+import { DEFAULT_SITE_URL } from "@/lib/constants";
 import { saveSettingsAction, changePasswordAction } from "@/lib/admin-actions";
 
 export const dynamic = "force-dynamic";

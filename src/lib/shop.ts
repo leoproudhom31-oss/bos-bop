@@ -1,6 +1,7 @@
 import type { Product } from "@prisma/client";
 import { prisma } from "./db";
 import { escapeHtml } from "./render";
+import { sectionShell } from "./blocks";
 import type { Cart } from "./cart";
 
 // ---------------------------------------------------------------------------
@@ -13,21 +14,7 @@ export function formatPrice(cents: number): string {
   return (cents / 100).toFixed(2).replace(".", ",") + " €";
 }
 
-const section = (inner: string) => `
-<section class="bd-section-17 bd-tagstyles" data-section-title="Section" id="section17">
-<div class="bd-container-inner bd-margins clearfix">
-<div class="bd-joomlaposition-22 clearfix">
-<div class="bd-block-79 bd-own-margins">
-<div class="bd-blockcontent bd-tagstyles bd-custom-bulletlist">
-<div class="custom">
-${inner}
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
-`;
+const section = (inner: string) => `\n${sectionShell(inner)}\n`;
 
 function productCard(product: Product): string {
   const img = product.imageUrl
