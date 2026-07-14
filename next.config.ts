@@ -4,6 +4,25 @@ const nextConfig: NextConfig = {
   // Le rendu des pages publiques dépend de la base de données (contenu géré
   // depuis l'administration) : tout est rendu dynamiquement côté serveur.
   poweredByHeader: false,
+  async headers() {
+    return [
+      {
+        // Assets du template d'origine : noms préfixés par un hash de contenu,
+        // donc immuables -> cache navigateur agressif sans risque.
+        source: "/assets/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        // Fichiers téléversés : noms horodatés (jamais réécrits), immuables.
+        source: "/uploads/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ];
+  },
   async redirects() {
     // Anciennes URL Joomla -> nouvelles URL (préservation du référencement)
     return [

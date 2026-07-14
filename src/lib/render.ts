@@ -1,7 +1,13 @@
 import type { Page } from "@prisma/client";
 import { prisma } from "./db";
 import { getTemplates, getHeadTemplate } from "./templates";
-import { getSetting, DEFAULT_SITE_URL } from "./settings";
+import { getSetting } from "./settings";
+import {
+  TITLE_SUFFIX,
+  INNER_BODY_CLASS,
+  HOME_BODY_CLASS,
+  DEFAULT_SITE_URL,
+} from "./constants";
 // Module JavaScript partagé avec le script d'extraction/vérification
 import { renderShell, escapeHtml } from "./shell.mjs";
 import { editorScriptHtml } from "./editor-script";
@@ -9,12 +15,6 @@ import { editorScriptHtml } from "./editor-script";
 export const HTML_HEADERS = {
   "content-type": "text/html; charset=utf-8",
 } as const;
-
-/** Suffixe commun des <title> du site d'origine. */
-export const TITLE_SUFFIX =
-  " - BOS & BOP - Orientation scolaire et professionnelle à Toulouse";
-
-export const INNER_BODY_CLASS = "bootstrap bd-body-7 bd-pagebackground-104 bd-margins";
 
 export type MenuEntry = {
   label: string;
@@ -49,9 +49,11 @@ type ShellPage = {
   sharePath: string;
 };
 
-// Filet de sécurité pour le menu mobile (voir le fichier lui-même pour le
-// détail) : ajouté à chaque page, en plus du contenu propre à la page.
-const SAFETY_SCRIPTS = '<script src="/assets/js/scroll-lock-fix.js" defer="defer"></script>';
+// Gestionnaire de défilement du menu mobile (voir le fichier lui-même pour
+// le détail) : ajouté à chaque page, en plus du contenu propre à la page.
+// (Servi hors de /assets/ : ce fichier n'est pas hashé, il ne doit pas être
+// mis en cache de façon immuable.)
+const SAFETY_SCRIPTS = '<script src="/js/scroll-manager.js" defer="defer"></script>';
 
 const HERO_TITLE_RE =
   /(<h1 class="bd-textblock-20 bd-content-element">)[\s\S]*?(<\/h1>)/;
@@ -184,9 +186,7 @@ export async function renderPreview(options: {
     title: "Aperçu" + TITLE_SUFFIX,
     metaDescription: "",
     metaKeywords: "",
-    bodyClass: options.isHome
-      ? "bootstrap bd-body-1 bd-homepage bd-pagebackground-49 bd-margins"
-      : INNER_BODY_CLASS,
+    bodyClass: options.isHome ? HOME_BODY_CLASS : INNER_BODY_CLASS,
     headHtml: getHeadTemplate(),
     contentHtml,
     extraTail,

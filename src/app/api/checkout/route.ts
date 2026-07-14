@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { formString } from "@/lib/forms";
 import { readCart, clearCartCookieHeader } from "@/lib/cart";
 import { resolveCart, cartTotalCents } from "@/lib/shop";
 import { isShopEnabled } from "@/lib/settings";
@@ -20,10 +21,7 @@ export async function POST(request: NextRequest) {
     return Response.redirect(new URL("/", request.url), 303);
   }
   const form = await request.formData();
-  const field = (name: string) => {
-    const value = form.get(name);
-    return typeof value === "string" ? value.trim().slice(0, 2000) : "";
-  };
+  const field = (name: string) => formString(form, name, 2000);
 
   const customerName = field("customerName");
   const email = field("email");

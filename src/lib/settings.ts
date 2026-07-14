@@ -1,7 +1,5 @@
 import { prisma } from "./db";
 
-export const DEFAULT_SITE_URL = "https://www.bos-bop.fr";
-
 export async function getSetting(key: string, fallback = ""): Promise<string> {
   const row = await prisma.setting.findUnique({ where: { key } });
   return row?.value ?? fallback;

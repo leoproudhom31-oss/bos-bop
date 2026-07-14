@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { formString } from "@/lib/forms";
 
 export const dynamic = "force-dynamic";
 
@@ -7,10 +8,7 @@ export const dynamic = "force-dynamic";
 // l'identique : les noms de champs numériques viennent du site d'origine).
 export async function POST(request: NextRequest) {
   const form = await request.formData();
-  const field = (name: string) => {
-    const value = form.get(name);
-    return typeof value === "string" ? value.trim().slice(0, 2000) : "";
-  };
+  const field = (name: string) => formString(form, name, 2000);
 
   const audience = field("4") === "Others" ? field("fieldOthers[4]") : field("4");
   const message = {
