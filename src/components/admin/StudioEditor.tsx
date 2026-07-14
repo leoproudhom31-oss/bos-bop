@@ -29,6 +29,7 @@ type EditMessage =
   | { type: "select"; index: number }
   | { type: "edit"; index: number; path: string; value: string }
   | { type: "action"; action: "up" | "down" | "duplicate" | "delete" | "settings"; index: number }
+  | { type: "action"; action: "reorder"; index: number; to: number }
   | { type: "insert"; at: number };
 
 /** Applique une valeur à un chemin pointé (ex "columns.1.heading") d'un bloc. */
@@ -123,7 +124,7 @@ export function StudioEditor({ page }: { page: StudioPage }) {
           setPaletteAt(d.at);
           break;
         case "action":
-          handleAction(d.action, d.index);
+          handleAction(d.action, d.index, d.action === "reorder" ? d.to : undefined);
           break;
       }
     };
@@ -133,7 +134,7 @@ export function StudioEditor({ page }: { page: StudioPage }) {
   }, []);
 
   const handleAction = useCallback(
-    (action: string, index: number) => {
+    (action: string, index: number, to?: number) => {
       setDirty(true);
       setItems((prev) => {
         const copy = [...prev];
@@ -152,6 +153,11 @@ export function StudioEditor({ page }: { page: StudioPage }) {
         } else if (action === "settings") {
           setSelected(index);
           setInspectorOpenMobile(true);
+        } else if (action === "reorder" && to !== undefined) {
+          const [moved] = copy.splice(index, 1);
+          const dest = to > index ? to - 1 : to;
+          copy.splice(dest, 0, moved);
+          setSelected(dest);
         }
         return copy;
       });

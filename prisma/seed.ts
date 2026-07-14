@@ -4,10 +4,16 @@
  *  - compte administrateur (variables ADMIN_EMAIL / ADMIN_PASSWORD)
  *  - réglages par défaut et exemple de livre pour la boutique
  *
- * Idempotent : peut être relancé sans dupliquer les données.
- * ATTENTION : le contenu des pages legacy est réécrasé depuis content/ à
- * chaque exécution (source de vérité initiale). Après la mise en production,
- * ne plus relancer le seed si le contenu a été modifié dans l'administration.
+ * Idempotent et SANS RISQUE pour un site déjà en production : par défaut,
+ * seules les pages/entrées de menu qui n'existent pas encore sont créées.
+ * Le contenu d'une page existante (potentiellement modifiée depuis
+ * l'administration) n'est jamais écrasé, sauf demande explicite via
+ * RESEED_LEGACY_CONTENT=1 (utile après une mise à jour du découpage en blocs
+ * des pages migrées — voir scripts/decompose-legacy.mjs).
+ *
+ * -> `npm run db:seed` peut donc être inclus sans crainte dans un script de
+ *    déploiement : sur une base neuve il l'amorce, sur une base existante il
+ *    ne fait rien de destructeur.
  */
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -19,6 +25,9 @@ const prisma = new PrismaClient();
 const root = process.cwd();
 const readContent = (rel: string) => readFileSync(join(root, "content", rel), "utf-8");
 const contentExists = (rel: string) => existsSync(join(root, "content", rel));
+
+// Ne réécrase le contenu des pages déjà existantes que si explicitement demandé.
+const RESEED_LEGACY_CONTENT = process.env.RESEED_LEGACY_CONTENT === "1";
 
 type PageMeta = {
   slug: string;
@@ -78,31 +87,41 @@ async function main() {
       published: true,
       isLegacy: true,
     };
-    await prisma.page.upsert({
-      where: { slug: meta.slug },
-      create: { slug: meta.slug, ...data },
-      update: data,
-    });
-    console.log(`page : /${meta.slug}`);
+    const existing = await prisma.page.findUnique({ where: { slug: meta.slug } });
+    if (!existing) {
+      await prisma.page.create({ data: { slug: meta.slug, ...data } });
+      console.log(`page créée : /${meta.slug}`);
+    } else if (RESEED_LEGACY_CONTENT) {
+      await prisma.page.update({ where: { slug: meta.slug }, data });
+      console.log(`page resynchronisée (RESEED_LEGACY_CONTENT=1) : /${meta.slug}`);
+    } else {
+      console.log(`page déjà présente, conservée telle quelle : /${meta.slug}`);
+    }
   }
 
-  // --- Menu principal --------------------------------------------------------
-  const menu: MenuEntry[] = JSON.parse(readContent("menu.json"));
-  await prisma.menuItem.deleteMany({});
-  for (const entry of menu) {
-    const slug = entry.url === "/" ? "" : entry.url.replace(/^\//, "");
-    const page = await prisma.page.findUnique({ where: { slug } });
-    await prisma.menuItem.create({
-      data: {
-        label: entry.label,
-        titleAttr: entry.titleAttr,
-        cssTag: entry.cssTag,
-        position: entry.position,
-        pageId: page?.id ?? null,
-        url: page ? "" : entry.url,
-      },
-    });
-    console.log(`menu : ${entry.label}`);
+  // --- Menu principal ----------------------------------------------------
+  // Uniquement amorcé si le menu est actuellement vide (installation neuve) :
+  // ne détruit jamais des entrées ajoutées ou réordonnées depuis l'admin.
+  const menuCount = await prisma.menuItem.count();
+  if (menuCount === 0) {
+    const menu: MenuEntry[] = JSON.parse(readContent("menu.json"));
+    for (const entry of menu) {
+      const slug = entry.url === "/" ? "" : entry.url.replace(/^\//, "");
+      const page = await prisma.page.findUnique({ where: { slug } });
+      await prisma.menuItem.create({
+        data: {
+          label: entry.label,
+          titleAttr: entry.titleAttr,
+          cssTag: entry.cssTag,
+          position: entry.position,
+          pageId: page?.id ?? null,
+          url: page ? "" : entry.url,
+        },
+      });
+      console.log(`menu : ${entry.label}`);
+    }
+  } else {
+    console.log(`menu déjà initialisé (${menuCount} entrée(s)), conservé tel quel`);
   }
 
   // --- Compte administrateur -------------------------------------------------

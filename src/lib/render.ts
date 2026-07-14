@@ -11,6 +11,7 @@ import {
 // Module JavaScript partagé avec le script d'extraction/vérification
 import { renderShell, escapeHtml } from "./shell.mjs";
 import { editorScriptHtml } from "./editor-script";
+import { ICON_FIX_STYLE } from "./icon-fix";
 
 export const HTML_HEADERS = {
   "content-type": "text/html; charset=utf-8",
@@ -49,11 +50,15 @@ type ShellPage = {
   sharePath: string;
 };
 
-// Gestionnaire de défilement du menu mobile (voir le fichier lui-même pour
-// le détail) : ajouté à chaque page, en plus du contenu propre à la page.
-// (Servi hors de /assets/ : ce fichier n'est pas hashé, il ne doit pas être
-// mis en cache de façon immuable.)
-const SAFETY_SCRIPTS = '<script src="/js/scroll-manager.js" defer="defer"></script>';
+// Correctifs ajoutés à chaque page, en plus du contenu propre à la page :
+//  - gestionnaire de défilement du menu mobile (voir le fichier lui-même) ;
+//    servi hors de /assets/ (non hashé) pour ne pas être mis en cache de
+//    façon immuable ;
+//  - remplacement de la police d'icônes manquante (voir icon-fix.ts).
+// Injectés en fin de document : n'affectent jamais le HTML vérifié à l'octet
+// par extract-legacy.mjs (qui n'utilise jamais extraTail).
+const SAFETY_SCRIPTS =
+  '<script src="/js/scroll-manager.js" defer="defer"></script>' + ICON_FIX_STYLE;
 
 const HERO_TITLE_RE =
   /(<h1 class="bd-textblock-20 bd-content-element">)[\s\S]*?(<\/h1>)/;
