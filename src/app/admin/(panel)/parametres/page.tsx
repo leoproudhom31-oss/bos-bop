@@ -2,6 +2,7 @@ import { getSetting } from "@/lib/settings";
 import { DEFAULT_SITE_URL } from "@/lib/constants";
 import { saveSettingsAction, changePasswordAction, saveStripeSettingsAction } from "@/lib/admin-actions";
 import { isStripeConfigured, isStripeWebhookConfigured } from "@/lib/stripe";
+import { getPublicOriginFromHeaders } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +25,18 @@ export default async function SettingsPage({
     getSetting("siteUrl", DEFAULT_SITE_URL),
     getSetting("shopEnabled", "0"),
   ]);
-  const [stripeKeyOk, stripeWebhookOk] = await Promise.all([
+  const [stripeKeyOk, stripeWebhookOk, publicOrigin] = await Promise.all([
     isStripeConfigured(),
     isStripeWebhookConfigured(),
+    getPublicOriginFromHeaders(),
   ]);
-  const webhookUrl = `${siteUrl.replace(/\/+$/, "")}/api/stripe/webhook`;
+  // Dérivée de la requête d'administration en cours (adresse actuellement
+  // utilisée pour accéder au site), jamais du réglage "Adresse publique du
+  // site" ci-dessus : celui-ci se périme dès que le site change de domaine
+  // (préproduction, bascule finale du DNS…) et Stripe redirigerait alors les
+  // clients — et enverrait ses webhooks — vers une adresse morte (voir
+  // getPublicOrigin/getPublicOriginFromHeaders dans src/lib/http.ts).
+  const webhookUrl = `${publicOrigin}/api/stripe/webhook`;
   // Une variable d'environnement, si définie, l'emporte toujours sur le
   // réglage enregistré ici (voir src/lib/stripe.ts) : le signaler pour ne
   // pas laisser croire qu'un enregistrement depuis cette page a un effet.
@@ -94,7 +102,9 @@ export default async function SettingsPage({
         <p className="subtitle">
           Adresse de webhook à renseigner dans le tableau de bord Stripe :{" "}
           <code className="slug">{webhookUrl}</code> — marche à suivre complète dans le README,
-          section « Connecter Stripe ».
+          section « Connecter Stripe ». Cette adresse correspond au domaine actuellement utilisé
+          pour accéder au site ; si vous changez de domaine (mise en ligne définitive, par
+          exemple), pensez à mettre à jour l&apos;endpoint webhook correspondant dans Stripe.
         </p>
 
         <form action={saveStripeSettingsAction}>
