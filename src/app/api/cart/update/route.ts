@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { readCart, cartCookieHeader } from "@/lib/cart";
+import { seeOther } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,5 @@ export async function POST(request: NextRequest) {
     cart[productId] = quantity;
   }
 
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: new URL("/panier", request.url).toString(),
-      "Set-Cookie": cartCookieHeader(cart),
-    },
-  });
+  return seeOther("/panier", { "Set-Cookie": cartCookieHeader(cart) });
 }

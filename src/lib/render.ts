@@ -101,15 +101,23 @@ export function applyHeroCustomization(
 /** Assemble le document HTML complet d'une page (gabarit + contenu + menu). */
 export async function renderDocument(page: ShellPage): Promise<string> {
   const menu = await getMenuEntries();
-  const [siteUrl, phone, facebookUrl, linkedinUrl] = await Promise.all([
+  const [siteUrl, phone, facebookUrl, linkedinUrl, shopEnabled] = await Promise.all([
     getSetting("siteUrl", DEFAULT_SITE_URL),
     getSetting("widgetPhone", ""),
     getSetting("widgetFacebookUrl", ""),
     getSetting("widgetLinkedinUrl", ""),
+    getSetting("shopEnabled", "0"),
   ]);
+  // Pastille « Mon panier » de l'en-tête (avec compteur d'articles) :
+  // uniquement quand la boutique est activée — sinon rien n'est chargé et
+  // l'apparence reste strictement celle du site d'origine.
+  const cartWidget =
+    shopEnabled === "1"
+      ? '<script src="/js/cart-widget.js" defer="defer"></script>'
+      : "";
   const html = renderShell(
     getTemplates(),
-    { ...page, extraTail: page.extraTail + SAFETY_SCRIPTS },
+    { ...page, extraTail: page.extraTail + SAFETY_SCRIPTS + cartWidget },
     menu,
     { siteUrl },
   );

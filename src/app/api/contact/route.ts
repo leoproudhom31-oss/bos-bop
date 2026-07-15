@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { formString } from "@/lib/forms";
 import { isRateLimited, clientIp } from "@/lib/rate-limit";
+import { seeOther } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -45,16 +46,18 @@ export async function POST(request: NextRequest) {
   // Robot détecté ou limite atteinte : on ne l'indique pas au client (même
   // redirection de succès) pour ne donner aucun indice exploitable.
 
-  // Retour sur la page d'origine avec le message de confirmation
+  // Retour sur la page d'origine avec le message de confirmation. Seul le
+  // CHEMIN du referer est repris (jamais son hôte) et la redirection est
+  // relative : on reste toujours sur le domaine que le visiteur utilise,
+  // même derrière un reverse proxy (voir seeOther dans src/lib/http.ts).
   const referer = request.headers.get("referer");
   let path = "/contact-orientation-scolaire-professionnel-toulouse";
   if (referer) {
     try {
-      const url = new URL(referer);
-      if (url.origin === request.nextUrl.origin) path = url.pathname;
+      path = new URL(referer).pathname;
     } catch {
       // referer invalide : on garde la page de contact par défaut
     }
   }
-  return Response.redirect(new URL(`${path}?sent=1`, request.url), 303);
+  return seeOther(`${path}?sent=1`);
 }

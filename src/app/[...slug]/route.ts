@@ -10,6 +10,7 @@ import { getSession } from "@/lib/auth";
 import { isShopEnabled } from "@/lib/settings";
 import { readCart, clearCartCookieHeader } from "@/lib/cart";
 import { isStripeConfigured } from "@/lib/stripe";
+import { seeOther } from "@/lib/http";
 import {
   viewShopList,
   viewProductDetail,
@@ -73,7 +74,7 @@ async function renderShopRoute(
   if (first === "commande" && parts.length === 1) {
     const lines = await resolveCart(readCart(request));
     if (lines.length === 0) {
-      return Response.redirect(new URL("/panier", request.url), 303);
+      return seeOther("/panier");
     }
     const error = request.nextUrl.searchParams.get("erreur") ?? undefined;
     const html = await renderVirtualPage({

@@ -6,6 +6,7 @@ import { resolveCart, cartTotalCents } from "@/lib/shop";
 import { isShopEnabled, getSetting } from "@/lib/settings";
 import { isStripeConfigured, getStripeClient } from "@/lib/stripe";
 import { DEFAULT_SITE_URL } from "@/lib/constants";
+import { seeOther } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ function makeReference(): string {
 //    décrémentés, réglage organisé manuellement avec le client.
 export async function POST(request: NextRequest) {
   if (!(await isShopEnabled())) {
-    return Response.redirect(new URL("/", request.url), 303);
+    return seeOther("/");
   }
   const form = await request.formData();
   const field = (name: string) => formString(form, name, 2000);
@@ -35,14 +36,13 @@ export async function POST(request: NextRequest) {
   const address = field("address");
 
   if (!customerName || !email || !address) {
-    const url = new URL("/commande", request.url);
-    url.searchParams.set("erreur", "Merci de renseigner votre nom, votre email et votre adresse.");
-    return Response.redirect(url, 303);
+    const erreur = encodeURIComponent("Merci de renseigner votre nom, votre email et votre adresse.");
+    return seeOther(`/commande?erreur=${erreur}`);
   }
 
   const lines = await resolveCart(readCart(request));
   if (lines.length === 0) {
-    return Response.redirect(new URL("/panier", request.url), 303);
+    return seeOther("/panier");
   }
 
   const useStripe = await isStripeConfigured();
@@ -68,6 +68,8 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  const confirmationPath = `/commande/confirmation?ref=${encodeURIComponent(order.reference)}`;
+
   if (!useStripe) {
     // Pas de paiement à attendre : stocks décrémentés immédiatement.
     for (const line of lines) {
@@ -76,9 +78,7 @@ export async function POST(request: NextRequest) {
         data: { stock: Math.max(0, line.product.stock - line.quantity) },
       });
     }
-    const url = new URL("/commande/confirmation", request.url);
-    url.searchParams.set("ref", order.reference);
-    return Response.redirect(url, 303);
+    return seeOther(confirmationPath);
   }
 
   // Repli sur le circuit sans paiement en ligne pour CETTE commande si
@@ -92,9 +92,7 @@ export async function POST(request: NextRequest) {
       });
     }
     await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: "UNPAID" } });
-    const url = new URL("/commande/confirmation", request.url);
-    url.searchParams.set("ref", order.reference);
-    return Response.redirect(url, 303);
+    return seeOther(confirmationPath);
   }
 
   const siteUrl = (await getSetting("siteUrl", DEFAULT_SITE_URL)).replace(/\/+$/, "");
