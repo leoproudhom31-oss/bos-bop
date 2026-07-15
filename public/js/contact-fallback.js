@@ -1,22 +1,19 @@
 /**
- * Le formulaire de contact d'origine bloque sa propre soumission tant que le
- * reCAPTCHA invisible de Google n'a pas répondu (voir assets/js/…_form.js :
- * `if (!invisible_recaptcha[0].invisibleRecaptchaVerified) { event.preventDefault();
- * grecaptcha.execute(...); return false; }`). En pratique le callback
- * n'arrivait jamais — domaine non enregistré pour la clé de site, script
- * Google inaccessible, etc. — perdant le message de l'internaute SANS AUCUNE
- * ERREUR VISIBLE. La protection anti-spam ne repose plus sur ce widget tiers :
- * on neutralise donc simplement la condition qu'il vérifie, sans toucher au
- * balisage d'origine (le badge reste affiché, il ne fait juste plus rien), et
- * on la remplace par un champ piège (honeypot) + une limite de fréquence côté
- * serveur (voir src/app/api/contact/route.ts) qui ne dépendent d'aucun
- * service tiers.
+ * Champ piège (honeypot) du formulaire de contact.
  *
- * Le formulaire est soumis via `$(formname).submit()` (jQuery), qui n'invoque
- * pas forcément les écouteurs natifs (`addEventListener`) : intercepter
- * l'évènement "submit" n'est donc pas fiable ici. On marque à la place le
- * widget comme déjà vérifié dès le chargement de la page, une bonne fois pour
- * toutes — la condition ci-dessus est alors toujours vraie.
+ * Le reCAPTCHA INVISIBLE d'origine (widget tiers du template) est désormais
+ * retiré du HTML côté serveur (voir src/lib/recaptcha.ts) : le formulaire
+ * d'origine bloquait sa propre soumission tant que ce widget cassé n'avait pas
+ * répondu, perdant le message SANS AUCUNE ERREUR VISIBLE. Il n'y a donc plus
+ * rien à neutraliser ici. La protection anti-spam repose sur :
+ *   - ce champ piège, invisible pour un humain mais souvent rempli aveuglément
+ *     par les robots (rejeté côté serveur, voir src/app/api/contact/route.ts) ;
+ *   - une limite de fréquence par IP (idem) ;
+ *   - éventuellement une case reCAPTCHA v2, si des clés sont configurées dans
+ *     l'administration (injectée côté serveur, indépendante de ce script).
+ *
+ * Injecté en fin de document (SAFETY_SCRIPTS dans render.ts) : n'affecte jamais
+ * le HTML vérifié à l'octet par extract-legacy.mjs.
  */
 (function () {
   "use strict";
@@ -38,15 +35,8 @@
     form.appendChild(field);
   }
 
-  function neutralizeRecaptcha() {
-    document.querySelectorAll(".g-invisible-recaptcha").forEach(function (widget) {
-      widget.invisibleRecaptchaVerified = true;
-    });
-  }
-
   function init() {
     document.querySelectorAll('form[action="/api/contact"]').forEach(addHoneypot);
-    neutralizeRecaptcha();
   }
 
   if (document.readyState === "loading") {
@@ -54,10 +44,4 @@
   } else {
     init();
   }
-
-  // Filet de sécurité : si une tentative précédente a échoué, le template
-  // peut supprimer le marqueur pour permettre une nouvelle tentative
-  // (`delete …invisibleRecaptchaVerified`) — on le repose alors avant la
-  // prochaine soumission plutôt que d'attendre un nouveau chargement de page.
-  document.addEventListener("click", neutralizeRecaptcha, true);
 })();

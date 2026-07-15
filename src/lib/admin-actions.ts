@@ -40,4 +40,5 @@ export {
   saveHeroAction,
   saveWidgetsAction,
   saveStripeSettingsAction,
+  saveRecaptchaSettingsAction,
 } from "./actions/settings";

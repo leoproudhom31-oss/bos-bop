@@ -40,6 +40,25 @@ export async function saveWidgetsAction(formData: FormData) {
   redirect("/admin/widgets?ok=1");
 }
 
+// reCAPTCHA : la clé de SITE est publique (visible dans le HTML), on la traite
+// comme un champ normal (on peut la pré-remplir, la vider l'efface). La clé
+// SECRÈTE suit la même règle prudente que Stripe : un champ vide ne l'écrase
+// pas ; « Retirer » efface explicitement les deux.
+export async function saveRecaptchaSettingsAction(formData: FormData) {
+  await requireSession();
+  if (formData.get("retirer") === "1") {
+    await setSetting("recaptchaSiteKey", "");
+    await setSetting("recaptchaSecretKey", "");
+  } else {
+    await setSetting("recaptchaSiteKey", str(formData, "recaptchaSiteKey", 300));
+    const secret = str(formData, "recaptchaSecretKey", 300);
+    if (secret) await setSetting("recaptchaSecretKey", secret);
+  }
+  revalidatePath("/admin/parametres");
+  revalidatePath("/", "layout");
+  redirect("/admin/parametres?ok=1");
+}
+
 // Clés Stripe : un champ laissé vide ne modifie pas la valeur déjà
 // enregistrée (on n'écrase jamais une clé existante par erreur avec un
 // formulaire soumis sans rien y avoir saisi). « Retirer les clés
