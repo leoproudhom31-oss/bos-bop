@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { uploadFile } from "@/lib/upload-client";
 
 /** Champ de sélection d'image : téléversement + saisie d'URL + aperçu. */
 export function ImagePicker({
@@ -19,14 +20,9 @@ export function ImagePicker({
     setUploading(true);
     setError(null);
     try {
-      const body = new FormData();
-      body.append("file", file);
-      const response = await fetch("/api/admin/upload", { method: "POST", body });
-      if (!response.ok) throw new Error(await response.text());
-      const data = (await response.json()) as { url: string };
-      onChange(data.url);
-    } catch {
-      setError("Échec de l'envoi du fichier.");
+      onChange(await uploadFile(file));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Échec de l'envoi du fichier.");
     } finally {
       setUploading(false);
     }

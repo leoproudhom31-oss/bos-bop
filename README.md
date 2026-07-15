@@ -71,7 +71,13 @@ pm2 start npm --name bos-bop -- start
 - reprise du favicon : la balise d'origine pointe vers
   `https://www.bos-bop.fr/templates/juillet2019/images/designer/…Fichier1.png` ;
   copier ce fichier du site actuel avant la bascule DNS (même chemin) ou
-  adapter la balise dans `content/heads/*.html` puis relancer le seed.
+  adapter la balise dans `content/heads/*.html` puis relancer le seed ;
+- si le site est servi derrière un reverse proxy (Nginx, Apache…) : penser à
+  relever sa limite de taille de requête (`client_max_body_size` sous Nginx,
+  1 Mo par défaut) au moins au niveau de `MAX_SIZE` dans
+  `src/app/api/admin/upload/route.ts` (25 Mo), sans quoi le téléversement
+  d'images (bannière, produits, pages) échoue silencieusement côté proxy
+  avant même d'atteindre l'application.
 
 ### Mise à jour du site (nouveau code, nouvelles pages)
 

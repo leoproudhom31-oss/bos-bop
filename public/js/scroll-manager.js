@@ -1,19 +1,40 @@
 /**
  * Gestionnaire de défilement du site (remplace l'ancien scroll-lock-fix.js).
  *
- * Contexte : le template d'origine verrouille le défilement pendant que le
- * menu mobile (offcanvas) est ouvert en posant `position:fixed` sur <html>
- * (fonctions disableScroll/enableScroll de assets/js/…_script.js) et ne le
- * libère qu'à la toute fin de l'animation de fermeture (~700 ms), voire
- * jamais si la fermeture est interrompue. Comportement visuel conservé à
- * l'identique ; seule la mécanique invisible est réécrite proprement :
+ * Corrige deux mécaniques invisibles héritées du template d'origine ; aucun
+ * changement d'apparence dans les deux cas, seule la façon dont le
+ * défilement RÉAGIT est concernée.
  *
- *  1. Déverrouillage dès le DÉBUT de la fermeture (évènement Bootstrap
- *     "hide.bs.collapse") : le défilement redevient utilisable sans délai.
- *  2. Filet de sécurité PILOTÉ PAR ÉVÈNEMENTS (MutationObserver sur le style
- *     de <html> et les classes du menu) au lieu d'une boucle setInterval :
- *     zéro réveil périodique, zéro travail quand rien ne se passe.
+ * 1) Verrou de défilement du menu mobile (offcanvas) : le template pose
+ *    `position:fixed` sur <html> (fonctions disableScroll/enableScroll de
+ *    assets/js/…_script.js) et ne le libère qu'à la toute fin de l'animation
+ *    de fermeture (~700 ms), voire jamais si la fermeture est interrompue.
+ *      a. Déverrouillage dès le DÉBUT de la fermeture (évènement Bootstrap
+ *         "hide.bs.collapse") : le défilement redevient utilisable sans délai.
+ *      b. Filet de sécurité PILOTÉ PAR ÉVÈNEMENTS (MutationObserver sur le
+ *         style de <html> et les classes du menu) au lieu d'une boucle
+ *         setInterval : zéro réveil périodique, zéro travail quand rien ne
+ *         se passe.
+ *
+ * 2) Molette « à l'ancienne » sur les pages avec effet de parallaxe (ex.
+ *    l'accueil) : le script d'origine active, uniquement quand un élément
+ *    `.bd-parallax-bg-effect` est présent, une bibliothèque tierce
+ *    (`window._smoothWheelInstance`, fonction SmoothWheel du même fichier)
+ *    qui intercepte la molette et ranime le défilement pas à pas via
+ *    setTimeout au lieu de laisser le navigateur le gérer nativement. Sur
+ *    les pavés tactiles et souris modernes (petits deltas très fréquents),
+ *    cette file d'attente d'animations produit un défilement saccadé qui
+ *    semble « revenir en arrière » en essayant de descendre. Neutralisée
+ *    avant que le script d'origine ne construise son instance (ce fichier
+ *    est chargé en `defer`, donc avant l'évènement "document ready" jQuery
+ *    auquel `onLoad()` est suspendu) : la molette redevient native. L'effet
+ *    de parallaxe visuel lui-même (animé séparément via
+ *    requestAnimationFrame dans le même fichier) n'est pas touché.
  */
+window._smoothWheelInstance = function () {
+  return null;
+};
+
 (function () {
   "use strict";
 
