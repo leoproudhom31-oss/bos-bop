@@ -19,14 +19,30 @@
     '<circle cx="10" cy="20" r="1.4"/><circle cx="17.5" cy="20" r="1.4"/></svg>';
 
   var CSS =
-    "#bd-cart-widget{display:inline-flex;align-items:center;gap:7px;margin-top:8px;" +
+    // Encadré « téléphone + panier » de l'en-tête : les deux lignes alignées,
+    // icônes dorées et séparateur discret pour les regrouper visuellement.
+    // Volontairement sans bordure ni fond (l'espace vertical de l'en-tête est
+    // compté : un panneau plus haut déborderait sur la barre de navigation).
+    ".bd-joomlaposition-32 .custom{display:inline-flex;flex-direction:column;line-height:1.25;}" +
+    ".bd-joomlaposition-32 .custom>div{display:flex;align-items:center;gap:9px;" +
+    "white-space:nowrap;font-size:16px;font-weight:600;}" +
+    ".bd-joomlaposition-32 .custom>div a{color:inherit;text-decoration:none;}" +
+    ".bd-joomlaposition-32 .custom>div a:hover{text-decoration:underline;}" +
+    ".bd-joomlaposition-32 .custom>div .icon-phone{color:#ddc076;}" +
+
+    "#bd-cart-widget{display:inline-flex;align-items:center;gap:8px;margin-top:6px;" +
+    "padding-top:6px;border-top:1px solid rgba(221,192,118,.35);" +
     "color:inherit;text-decoration:none;font-weight:600;white-space:nowrap;cursor:pointer;}" +
     "#bd-cart-widget:hover .bd-cart-label{text-decoration:underline;}" +
-    "#bd-cart-widget .bd-cart-badge{display:none;min-width:19px;height:19px;border-radius:10px;" +
-    "background:#ddc076;color:#102f40;font-size:12px;line-height:19px;text-align:center;" +
-    "padding:0 5px;font-weight:700;}" +
+    "#bd-cart-widget .bd-cart-icon{color:#ddc076;display:inline-flex;}" +
+    "#bd-cart-widget .bd-cart-badge{display:none;min-width:20px;height:20px;border-radius:10px;" +
+    "background:#ddc076;color:#102f40;font-size:12px;line-height:20px;text-align:center;" +
+    "padding:0 6px;font-weight:700;margin-left:1px;}" +
+
+    // Repli (gabarit inattendu, encadré téléphone absent) : pastille flottante
+    // autonome, sans dépendre du panneau parent.
     "#bd-cart-widget.bd-cart-floating{position:fixed;right:16px;bottom:16px;z-index:9998;" +
-    "margin:0;background:#102f40;color:#fff;border-radius:24px;padding:11px 18px;" +
+    "margin:0;padding:11px 18px;border:none;background:#102f40;color:#fff;border-radius:24px;" +
     "box-shadow:0 4px 14px rgba(0,0,0,.3);}";
 
   function cartCount() {
@@ -54,7 +70,7 @@
       widget.href = "/panier";
       widget.title = "Voir mon panier";
       widget.innerHTML =
-        CART_ICON +
+        '<span class="bd-cart-icon">' + CART_ICON + "</span>" +
         '<span class="bd-cart-label">Mon panier</span>' +
         '<span class="bd-cart-badge" aria-label="articles dans le panier"></span>';
 

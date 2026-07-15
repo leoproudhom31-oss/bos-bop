@@ -10,6 +10,7 @@ import { getSession } from "@/lib/auth";
 import { isShopEnabled } from "@/lib/settings";
 import { readCart, clearCartCookieHeader } from "@/lib/cart";
 import { isStripeConfigured } from "@/lib/stripe";
+import { reconcileOrderPayment } from "@/lib/orders";
 import { seeOther } from "@/lib/http";
 import {
   viewShopList,
@@ -87,9 +88,10 @@ async function renderShopRoute(
 
   if (first === "commande" && second === "confirmation") {
     const reference = request.nextUrl.searchParams.get("ref") ?? "";
-    const order = reference
-      ? await prisma.order.findUnique({ where: { reference } })
-      : null;
+    // Contrôle synchrone du paiement auprès de Stripe (ne dépend pas du
+    // webhook) : la commande affiche « payée » dès le retour du client, même
+    // si le webhook est mal configuré côté Stripe (voir src/lib/orders.ts).
+    const order = reference ? await reconcileOrderPayment(reference) : null;
     const html = await renderVirtualPage({
       path: "commande/confirmation",
       shortTitle: "Commande confirmée",

@@ -225,16 +225,22 @@ ${paymentNote}
 }
 
 export function viewOrderConfirmation(reference: string, paymentStatus: string): string {
+  const isPending = paymentStatus === "PENDING";
   const paymentNote =
     paymentStatus === "PAID"
       ? "<p style=\"margin:10px 0 0;\">Votre paiement en ligne a bien été reçu, merci !</p>"
-      : paymentStatus === "PENDING"
-        ? "<p style=\"margin:10px 0 0;\"><em>Confirmation du paiement en cours — la page se rechargera automatiquement dans un instant.</em></p>"
-        : "<p style=\"margin:10px 0 0;\">Nous vous recontactons rapidement par email ou téléphone pour organiser le règlement et la livraison.</p>";
-  const autoRefresh =
-    paymentStatus === "PENDING"
-      ? '<script>setTimeout(function(){ location.reload(); }, 4000);</script>'
-      : "";
+      : paymentStatus === "FAILED"
+        ? "<p style=\"margin:10px 0 0;\">Le paiement en ligne n'a pas abouti. Vous pouvez réessayer, ou nous vous recontactons pour organiser le règlement autrement.</p>"
+        : isPending
+          ? "<p style=\"margin:10px 0 0;\"><em>Votre paiement est en cours de confirmation. Cette page se met à jour automatiquement, et vous recevrez un email dès qu'il est validé.</em></p>"
+          : "<p style=\"margin:10px 0 0;\">Nous vous recontactons rapidement par email ou téléphone pour organiser le règlement et la livraison.</p>";
+  // En attente (paiement asynchrone type SEPA), la page se recharge quelques
+  // fois : à chaque rechargement, le statut est revérifié auprès de Stripe
+  // (voir reconcileOrderPayment) et finit par basculer sur « payé ». Limité à
+  // quelques essais pour ne pas boucler indéfiniment si le paiement traîne.
+  const autoRefresh = isPending
+    ? '<script>(function(){var K="bosbop_conf_reload";try{var n=parseInt(sessionStorage.getItem(K)||"0",10);if(n<5){sessionStorage.setItem(K,String(n+1));setTimeout(function(){location.reload();},3000);}else{sessionStorage.removeItem(K);}}catch(e){}})();</script>'
+    : '<script>try{sessionStorage.removeItem("bosbop_conf_reload");}catch(e){}</script>';
   return section(`<div style="max-width:620px;margin:0 auto;text-align:center;border:1px solid #e6e4dd;border-radius:10px;padding:36px 28px;background:#fff;">
 <svg viewBox="0 0 24 24" width="52" height="52" aria-hidden="true" fill="none" stroke="${GOLD}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px;">
 <circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/>

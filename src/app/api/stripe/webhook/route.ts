@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { getStripeClient, getStripeWebhookSecret, isStripeWebhookConfigured } from "@/lib/stripe";
+import { markOrderPaid } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -46,29 +47,4 @@ export async function POST(request: NextRequest) {
   }
 
   return Response.json({ received: true });
-}
-
-/** Idempotent : plusieurs livraisons du même évènement (Stripe réessaie en
- * cas de non-réponse) ne décrémentent le stock qu'une seule fois. */
-async function markOrderPaid(orderId: number) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { items: true },
-  });
-  if (!order || order.paymentStatus === "PAID") return;
-
-  await prisma.order.update({
-    where: { id: orderId },
-    data: { paymentStatus: "PAID", status: "CONFIRMED" },
-  });
-
-  for (const item of order.items) {
-    if (!item.productId) continue;
-    await prisma.product.update({
-      where: { id: item.productId },
-      data: { stock: { decrement: item.quantity } },
-    }).catch(() => {
-      // Produit supprimé depuis : rien à décrémenter.
-    });
-  }
 }
