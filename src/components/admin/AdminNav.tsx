@@ -22,6 +22,7 @@ const GROUPS: readonly NavGroup[] = [
       { href: "/admin", label: "Tableau de bord", exact: true },
       { href: "/admin/pages", label: "Pages" },
       { href: "/admin/accueil", label: "Bannière d'accueil" },
+      { href: "/admin/widgets", label: "Widgets" },
       { href: "/admin/menu", label: "Menu du site" },
     ],
   },

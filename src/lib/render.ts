@@ -12,6 +12,7 @@ import {
 import { renderShell, escapeHtml } from "./shell.mjs";
 import { editorScriptHtml } from "./editor-script";
 import { ICON_FIX_STYLE } from "./icon-fix";
+import { applyWidgetCustomization } from "./widgets";
 
 export const HTML_HEADERS = {
   "content-type": "text/html; charset=utf-8",
@@ -54,11 +55,16 @@ type ShellPage = {
 //  - gestionnaire de défilement du menu mobile (voir le fichier lui-même) ;
 //    servi hors de /assets/ (non hashé) pour ne pas être mis en cache de
 //    façon immuable ;
-//  - remplacement de la police d'icônes manquante (voir icon-fix.ts).
+//  - remplacement de la police d'icônes manquante (voir icon-fix.ts) ;
+//  - filet de sécurité pour le reCAPTCHA invisible du formulaire de contact
+//    (voir contact-fallback.js) : sans lui, un échec du widget tiers bloque
+//    silencieusement l'envoi du message.
 // Injectés en fin de document : n'affectent jamais le HTML vérifié à l'octet
 // par extract-legacy.mjs (qui n'utilise jamais extraTail).
 const SAFETY_SCRIPTS =
-  '<script src="/js/scroll-manager.js" defer="defer"></script>' + ICON_FIX_STYLE;
+  '<script src="/js/scroll-manager.js" defer="defer"></script>' +
+  '<script src="/js/contact-fallback.js" defer="defer"></script>' +
+  ICON_FIX_STYLE;
 
 const HERO_TITLE_RE =
   /(<h1 class="bd-textblock-20 bd-content-element">)[\s\S]*?(<\/h1>)/;
@@ -95,13 +101,19 @@ export function applyHeroCustomization(
 /** Assemble le document HTML complet d'une page (gabarit + contenu + menu). */
 export async function renderDocument(page: ShellPage): Promise<string> {
   const menu = await getMenuEntries();
-  const siteUrl = await getSetting("siteUrl", DEFAULT_SITE_URL);
-  return renderShell(
+  const [siteUrl, phone, facebookUrl, linkedinUrl] = await Promise.all([
+    getSetting("siteUrl", DEFAULT_SITE_URL),
+    getSetting("widgetPhone", ""),
+    getSetting("widgetFacebookUrl", ""),
+    getSetting("widgetLinkedinUrl", ""),
+  ]);
+  const html = renderShell(
     getTemplates(),
     { ...page, extraTail: page.extraTail + SAFETY_SCRIPTS },
     menu,
     { siteUrl },
   );
+  return applyWidgetCustomization(html, { phone, facebookUrl, linkedinUrl });
 }
 
 /** Rendu d'une page stockée en base. */

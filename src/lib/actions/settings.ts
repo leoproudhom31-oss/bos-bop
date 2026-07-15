@@ -25,3 +25,13 @@ export async function saveHeroAction(formData: FormData) {
   revalidatePath("/");
   redirect("/admin/accueil?ok=1");
 }
+
+export async function saveWidgetsAction(formData: FormData) {
+  await requireSession();
+  await setSetting("widgetPhone", str(formData, "widgetPhone", 30));
+  await setSetting("widgetFacebookUrl", str(formData, "widgetFacebookUrl", 300));
+  await setSetting("widgetLinkedinUrl", str(formData, "widgetLinkedinUrl", 300));
+  revalidatePath("/admin/widgets");
+  revalidatePath("/", "layout");
+  redirect("/admin/widgets?ok=1");
+}
