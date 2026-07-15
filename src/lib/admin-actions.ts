@@ -33,7 +33,7 @@ export {
   deleteProductAction,
 } from "./actions/products";
 
-export { updateOrderStatusAction } from "./actions/orders";
+export { updateOrderStatusAction, checkOrderPaymentAction } from "./actions/orders";
 
 export {
   saveSettingsAction,

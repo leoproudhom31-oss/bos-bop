@@ -64,7 +64,14 @@ export async function reconcileOrderPayment(reference: string): Promise<Order | 
 
   try {
     const stripe = await getStripeClient();
-    const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId);
+    // Appel synchrone pendant le rendu d'une page (confirmation client, détail
+    // commande admin) : borné à un seul essai et 8 s pour qu'un ralentissement
+    // de Stripe ne bloque jamais l'affichage (le webhook reste le filet).
+    const session = await stripe.checkout.sessions.retrieve(
+      order.stripeSessionId,
+      undefined,
+      { maxNetworkRetries: 0, timeout: 8000 },
+    );
 
     if (session.payment_status === "paid") {
       await markOrderPaid(order.id);
