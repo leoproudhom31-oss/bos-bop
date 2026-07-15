@@ -2,12 +2,13 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { readCart, cartCookieHeader } from "@/lib/cart";
 import { isShopEnabled } from "@/lib/settings";
+import { seeOther } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   if (!(await isShopEnabled())) {
-    return Response.redirect(new URL("/", request.url), 303);
+    return seeOther("/");
   }
   const form = await request.formData();
   const productId = Number(form.get("productId"));
@@ -19,11 +20,5 @@ export async function POST(request: NextRequest) {
     cart[String(product.id)] = Math.min((cart[String(product.id)] ?? 0) + quantity, 99);
   }
 
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: new URL("/panier", request.url).toString(),
-      "Set-Cookie": cartCookieHeader(cart),
-    },
-  });
+  return seeOther("/panier", { "Set-Cookie": cartCookieHeader(cart) });
 }
