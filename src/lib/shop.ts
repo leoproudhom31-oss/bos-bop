@@ -139,13 +139,16 @@ ${rows}
 <p><a href="/commande" title="Passer la commande"> <button>Passer la commande</button> </a> &nbsp; <a href="/livres" title="Continuer mes achats">Continuer mes achats</a></p>`);
 }
 
-export function viewCheckout(lines: CartLine[], error?: string): string {
+export function viewCheckout(lines: CartLine[], error: string | undefined, stripeEnabled: boolean): string {
   const recap = lines
     .map((l) => `<li>${escapeHtml(l.product.title)} × ${l.quantity} — ${formatPrice(l.product.priceCents * l.quantity)}</li>`)
     .join("\n");
   const errorHtml = error
     ? `<div class="alert alert-error">${escapeHtml(error)}</div>`
     : "";
+  const paymentNote = stripeEnabled
+    ? "<p><em>Étape suivante : paiement sécurisé par carte bancaire (Stripe).</em></p>"
+    : "<p><em>Le paiement en ligne n'est pas encore activé : après validation, nous vous contactons pour organiser le règlement et la remise (en main propre à Toulouse ou par envoi postal).</em></p>";
   return section(`<h2>Valider ma commande</h2>
 ${errorHtml}
 <div class="row">
@@ -156,7 +159,7 @@ ${errorHtml}
 <p><label>Téléphone<br/><input name="phone" style="width: 100%;" type="text"/></label></p>
 <p><label>Adresse de livraison<span class="required">*</span><br/><textarea name="address" required="required" rows="4" style="width: 100%;"></textarea></label></p>
 <p><label>Remarque (facultatif)<br/><textarea name="note" rows="3" style="width: 100%;"></textarea></label></p>
-<p><button type="submit">Confirmer la commande</button></p>
+<p><button type="submit">${stripeEnabled ? "Passer au paiement" : "Confirmer la commande"}</button></p>
 </form>
 </div>
 <div class="col-sm-6">
@@ -165,14 +168,24 @@ ${errorHtml}
 ${recap}
 </ul>
 <p><strong>Total : ${formatPrice(cartTotalCents(lines))}</strong></p>
-<p><em>Le paiement en ligne n'est pas encore activé : après validation, nous vous contactons pour organiser le règlement et la remise (en main propre à Toulouse ou par envoi postal).</em></p>
+${paymentNote}
 </div>
 </div>`);
 }
 
-export function viewOrderConfirmation(reference: string): string {
+export function viewOrderConfirmation(reference: string, paymentStatus: string): string {
+  const paymentNote =
+    paymentStatus === "PAID"
+      ? "<p>Votre paiement en ligne a bien été reçu, merci !</p>"
+      : paymentStatus === "PENDING"
+        ? "<p><em>Confirmation du paiement en cours — la page se rechargera automatiquement dans un instant.</em></p>"
+        : "<p>Nous vous recontactons rapidement par email ou téléphone pour organiser le règlement et la livraison.</p>";
+  const autoRefresh =
+    paymentStatus === "PENDING"
+      ? '<script>setTimeout(function(){ location.reload(); }, 4000);</script>'
+      : "";
   return section(`<h2>Merci pour votre commande !</h2>
 <p>Votre commande <strong>${escapeHtml(reference)}</strong> a bien été enregistrée.</p>
-<p>Nous vous recontactons rapidement par email ou téléphone pour organiser le règlement et la livraison.</p>
-<p><a href="/" title="Retour à l'accueil"> <button>Retour à l'accueil</button> </a></p>`);
+${paymentNote}
+<p><a href="/" title="Retour à l'accueil"> <button>Retour à l'accueil</button> </a></p>${autoRefresh}`);
 }

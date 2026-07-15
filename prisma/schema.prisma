@@ -122,6 +122,12 @@ model Order {
   totalCents   Int         @default(0)
   createdAt    DateTime    @default(now())
   items        OrderItem[]
+
+  // Paiement en ligne (Stripe) : UNPAID (paiement à organiser manuellement,
+  // Stripe non configuré ou commande créée avant son activation) -> PENDING
+  // (redirigé vers Stripe, en attente du webhook) -> PAID -> REFUNDED.
+  paymentStatus   String  @default("UNPAID")
+  stripeSessionId String? @unique
 }
 
 model OrderItem {
