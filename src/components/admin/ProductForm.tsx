@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Product } from "@prisma/client";
 import { saveProductAction } from "@/lib/admin-actions";
+import { uploadFile } from "@/lib/upload-client";
 
 export function ProductForm({ product }: { product: Product | null }) {
   const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
@@ -13,14 +14,9 @@ export function ProductForm({ product }: { product: Product | null }) {
     setUploading(true);
     setError(null);
     try {
-      const body = new FormData();
-      body.append("file", file);
-      const response = await fetch("/api/admin/upload", { method: "POST", body });
-      if (!response.ok) throw new Error(await response.text());
-      const data = (await response.json()) as { url: string };
-      setImageUrl(data.url);
-    } catch {
-      setError("Échec de l'envoi du fichier.");
+      setImageUrl(await uploadFile(file));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Échec de l'envoi du fichier.");
     } finally {
       setUploading(false);
     }
