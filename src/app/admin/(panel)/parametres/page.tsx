@@ -1,6 +1,7 @@
 import { getSetting } from "@/lib/settings";
 import { DEFAULT_SITE_URL } from "@/lib/constants";
 import { saveSettingsAction, changePasswordAction } from "@/lib/admin-actions";
+import { isStripeConfigured, isStripeWebhookConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,9 @@ export default async function SettingsPage({
     getSetting("siteUrl", DEFAULT_SITE_URL),
     getSetting("shopEnabled", "0"),
   ]);
+  const stripeKeyOk = isStripeConfigured();
+  const stripeWebhookOk = isStripeWebhookConfigured();
+  const webhookUrl = `${siteUrl.replace(/\/+$/, "")}/api/stripe/webhook`;
 
   return (
     <>
@@ -52,6 +56,45 @@ export default async function SettingsPage({
             Enregistrer
           </button>
         </form>
+      </div>
+
+      <div className="panel">
+        <h2>Paiement en ligne (Stripe)</h2>
+        <p>
+          Clé secrète Stripe :{" "}
+          <span className={`badge ${stripeKeyOk ? "vert" : "gris"}`}>
+            {stripeKeyOk ? "Configurée" : "Non configurée"}
+          </span>
+        </p>
+        <p>
+          Webhook de confirmation :{" "}
+          <span className={`badge ${stripeWebhookOk ? "vert" : "gris"}`}>
+            {stripeWebhookOk ? "Configuré" : "Non configuré"}
+          </span>
+        </p>
+        {stripeKeyOk ? (
+          <p className="subtitle">
+            Le paiement par carte est actif : à la validation d&apos;une commande, le client est
+            redirigé vers une page de paiement Stripe sécurisée.
+          </p>
+        ) : (
+          <p className="subtitle">
+            Tant qu&apos;aucune clé n&apos;est configurée, la boutique fonctionne normalement :
+            après validation, une commande est enregistrée et vous convenez du règlement
+            directement avec le client (comme aujourd&apos;hui).
+          </p>
+        )}
+        <p className="subtitle">
+          Adresse de webhook à renseigner dans le tableau de bord Stripe :{" "}
+          <code className="slug">{webhookUrl}</code>
+        </p>
+        <p className="subtitle">
+          Ces clés sont des identifiants sensibles : elles se configurent dans le fichier{" "}
+          <code className="slug">.env</code> du serveur (variables{" "}
+          <code className="slug">STRIPE_SECRET_KEY</code> et{" "}
+          <code className="slug">STRIPE_WEBHOOK_SECRET</code>), pas depuis cette page. Marche à
+          suivre détaillée dans le README du projet, section « Connecter Stripe ».
+        </p>
       </div>
 
       <div className="panel">

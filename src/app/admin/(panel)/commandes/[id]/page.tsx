@@ -2,10 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatPrice } from "@/lib/shop";
-import { formatDate, ORDER_STATUS_LABELS } from "@/lib/format";
+import { formatDate, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/format";
 import { updateOrderStatusAction } from "@/lib/admin-actions";
 
 export const dynamic = "force-dynamic";
+
+const BADGE_BY_PAYMENT_STATUS: Record<string, string> = {
+  UNPAID: "gris",
+  PENDING: "or",
+  PAID: "vert",
+  FAILED: "rouge",
+};
 
 export default async function OrderDetailPage({
   params,
@@ -49,6 +56,12 @@ export default async function OrderDetailPage({
             Statut actuel :{" "}
             <span className="badge or">{ORDER_STATUS_LABELS[order.status] ?? order.status}</span>
           </p>
+          <p>
+            Paiement :{" "}
+            <span className={`badge ${BADGE_BY_PAYMENT_STATUS[order.paymentStatus] ?? "gris"}`}>
+              {PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}
+            </span>
+          </p>
           <form action={updateOrderStatusAction} className="actions-ligne">
             <input type="hidden" name="id" value={order.id} />
             <select name="status" defaultValue={order.status}>
@@ -63,8 +76,13 @@ export default async function OrderDetailPage({
             </button>
           </form>
           <p className="subtitle" style={{ marginTop: 14 }}>
-            Le paiement en ligne n&apos;est pas encore branché : contactez le client pour
-            convenir du règlement, puis passez la commande en « Confirmée ».
+            {order.paymentStatus === "PAID"
+              ? "Paiement reçu automatiquement via Stripe."
+              : order.paymentStatus === "PENDING"
+                ? "Le client a été redirigé vers Stripe pour payer ; en attente de confirmation."
+                : order.paymentStatus === "FAILED"
+                  ? "Le paiement Stripe a échoué ou a expiré : contactez le client si besoin."
+                  : "Paiement en ligne non utilisé pour cette commande : contactez le client pour convenir du règlement, puis passez la commande en « Confirmée »."}
           </p>
         </div>
       </div>

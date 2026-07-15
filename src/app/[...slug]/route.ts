@@ -8,7 +8,8 @@ import {
 } from "@/lib/render";
 import { getSession } from "@/lib/auth";
 import { isShopEnabled } from "@/lib/settings";
-import { readCart } from "@/lib/cart";
+import { readCart, clearCartCookieHeader } from "@/lib/cart";
+import { isStripeConfigured } from "@/lib/stripe";
 import {
   viewShopList,
   viewProductDetail,
@@ -78,19 +79,25 @@ async function renderShopRoute(
     const html = await renderVirtualPage({
       path: "commande",
       shortTitle: "Commande",
-      contentHtml: viewCheckout(lines, error),
+      contentHtml: viewCheckout(lines, error, isStripeConfigured()),
     });
     return new Response(html, { headers: HTML_HEADERS });
   }
 
   if (first === "commande" && second === "confirmation") {
     const reference = request.nextUrl.searchParams.get("ref") ?? "";
+    const order = reference
+      ? await prisma.order.findUnique({ where: { reference } })
+      : null;
     const html = await renderVirtualPage({
       path: "commande/confirmation",
       shortTitle: "Commande confirmée",
-      contentHtml: viewOrderConfirmation(reference),
+      contentHtml: viewOrderConfirmation(reference, order?.paymentStatus ?? "UNPAID"),
     });
-    return new Response(html, { headers: HTML_HEADERS });
+    // Atteindre cette page ferme le processus de commande (paiement effectué
+    // ou circuit sans paiement en ligne) : le panier est vidé ici, pas avant
+    // (voir /api/checkout — un panier annulé sur Stripe reste réutilisable).
+    return new Response(html, { headers: { ...HTML_HEADERS, "Set-Cookie": clearCartCookieHeader() } });
   }
 
   return null;

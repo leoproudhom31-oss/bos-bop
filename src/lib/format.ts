@@ -16,3 +16,10 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   SHIPPED: "Expédiée",
   CANCELLED: "Annulée",
 };
+
+export const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  UNPAID: "Paiement manuel",
+  PENDING: "En attente de paiement",
+  PAID: "Payée (Stripe)",
+  FAILED: "Paiement échoué",
+};

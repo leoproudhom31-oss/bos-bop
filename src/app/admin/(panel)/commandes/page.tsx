@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatPrice } from "@/lib/shop";
-import { formatDate, ORDER_STATUS_LABELS } from "@/lib/format";
+import { formatDate, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +10,13 @@ const BADGE_BY_STATUS: Record<string, string> = {
   CONFIRMED: "bleu",
   SHIPPED: "vert",
   CANCELLED: "rouge",
+};
+
+const BADGE_BY_PAYMENT_STATUS: Record<string, string> = {
+  UNPAID: "gris",
+  PENDING: "or",
+  PAID: "vert",
+  FAILED: "rouge",
 };
 
 export default async function OrdersPage() {
@@ -37,6 +44,7 @@ export default async function OrdersPage() {
               <th>Articles</th>
               <th>Total</th>
               <th>Statut</th>
+              <th>Paiement</th>
             </tr>
           </thead>
           <tbody>
@@ -52,6 +60,11 @@ export default async function OrdersPage() {
                 <td>
                   <span className={`badge ${BADGE_BY_STATUS[order.status] ?? "gris"}`}>
                     {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                  </span>
+                </td>
+                <td>
+                  <span className={`badge ${BADGE_BY_PAYMENT_STATUS[order.paymentStatus] ?? "gris"}`}>
+                    {PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}
                   </span>
                 </td>
               </tr>

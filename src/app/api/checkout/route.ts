@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { formString } from "@/lib/forms";
-import { readCart, clearCartCookieHeader } from "@/lib/cart";
+import { readCart } from "@/lib/cart";
 import { resolveCart, cartTotalCents } from "@/lib/shop";
-import { isShopEnabled } from "@/lib/settings";
+import { isShopEnabled, getSetting } from "@/lib/settings";
+import { isStripeConfigured, getStripeClient } from "@/lib/stripe";
+import { DEFAULT_SITE_URL } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +16,13 @@ function makeReference(): string {
   return `BOS-${stamp}-${random}`;
 }
 
-// Enregistre la commande. Le paiement en ligne (Stripe, PayPal...) pourra se
-// brancher ici : créer la session de paiement avant de confirmer la commande.
+// Enregistre la commande, puis :
+//  - si Stripe est configuré (STRIPE_SECRET_KEY, voir src/lib/stripe.ts) :
+//    redirige vers une session Stripe Checkout. La commande reste en attente
+//    (paymentStatus "PENDING", stocks non décrémentés) jusqu'à la confirmation
+//    du paiement par webhook (voir /api/stripe/webhook) ;
+//  - sinon : circuit d'origine, commande directement enregistrée et stocks
+//    décrémentés, réglage organisé manuellement avec le client.
 export async function POST(request: NextRequest) {
   if (!(await isShopEnabled())) {
     return Response.redirect(new URL("/", request.url), 303);
@@ -38,6 +45,8 @@ export async function POST(request: NextRequest) {
     return Response.redirect(new URL("/panier", request.url), 303);
   }
 
+  const useStripe = isStripeConfigured();
+
   const order = await prisma.order.create({
     data: {
       reference: makeReference(),
@@ -47,6 +56,7 @@ export async function POST(request: NextRequest) {
       address,
       note: field("note"),
       totalCents: cartTotalCents(lines),
+      paymentStatus: useStripe ? "PENDING" : "UNPAID",
       items: {
         create: lines.map((line) => ({
           productId: line.product.id,
@@ -58,21 +68,69 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // Décrémente les stocks (sans passer en négatif)
-  for (const line of lines) {
-    await prisma.product.update({
-      where: { id: line.product.id },
-      data: { stock: Math.max(0, line.product.stock - line.quantity) },
-    });
+  if (!useStripe) {
+    // Pas de paiement à attendre : stocks décrémentés immédiatement.
+    for (const line of lines) {
+      await prisma.product.update({
+        where: { id: line.product.id },
+        data: { stock: Math.max(0, line.product.stock - line.quantity) },
+      });
+    }
+    const url = new URL("/commande/confirmation", request.url);
+    url.searchParams.set("ref", order.reference);
+    return Response.redirect(url, 303);
   }
 
-  const url = new URL("/commande/confirmation", request.url);
-  url.searchParams.set("ref", order.reference);
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: url.toString(),
-      "Set-Cookie": clearCartCookieHeader(),
-    },
-  });
+  // Repli sur le circuit sans paiement en ligne pour CETTE commande si
+  // Stripe est injoignable ou mal configuré : le client ne doit jamais se
+  // retrouver bloqué par un problème côté prestataire de paiement.
+  async function fallbackToManualPayment(): Promise<Response> {
+    for (const line of lines) {
+      await prisma.product.update({
+        where: { id: line.product.id },
+        data: { stock: Math.max(0, line.product.stock - line.quantity) },
+      });
+    }
+    await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: "UNPAID" } });
+    const url = new URL("/commande/confirmation", request.url);
+    url.searchParams.set("ref", order.reference);
+    return Response.redirect(url, 303);
+  }
+
+  const siteUrl = (await getSetting("siteUrl", DEFAULT_SITE_URL)).replace(/\/+$/, "");
+  try {
+    const stripe = getStripeClient();
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer_email: email,
+      client_reference_id: order.reference,
+      line_items: lines.map((line) => ({
+        quantity: line.quantity,
+        price_data: {
+          currency: "eur",
+          unit_amount: line.product.priceCents,
+          product_data: { name: line.product.title },
+        },
+      })),
+      success_url: `${siteUrl}/commande/confirmation?ref=${encodeURIComponent(order.reference)}`,
+      cancel_url: `${siteUrl}/commande`,
+      metadata: { orderId: String(order.id), orderReference: order.reference },
+    });
+
+    if (!session.url) return fallbackToManualPayment();
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { stripeSessionId: session.id },
+    });
+
+    // Le panier n'est volontairement pas vidé ici : si le client annule le
+    // paiement Stripe, cancel_url le ramène sur /commande avec son panier
+    // intact pour réessayer. Il n'est vidé qu'à l'arrivée sur la confirmation
+    // (voir src/app/[...slug]/route.ts), atteinte uniquement après paiement.
+    return Response.redirect(session.url, 303);
+  } catch (error) {
+    console.error("Échec de création de la session Stripe :", error);
+    return fallbackToManualPayment();
+  }
 }
