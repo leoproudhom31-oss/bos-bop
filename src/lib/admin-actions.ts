@@ -39,4 +39,5 @@ export {
   saveSettingsAction,
   saveHeroAction,
   saveWidgetsAction,
+  saveStripeSettingsAction,
 } from "./actions/settings";

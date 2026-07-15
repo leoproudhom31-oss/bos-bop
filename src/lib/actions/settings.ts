@@ -35,3 +35,22 @@ export async function saveWidgetsAction(formData: FormData) {
   revalidatePath("/", "layout");
   redirect("/admin/widgets?ok=1");
 }
+
+// Clés Stripe : un champ laissé vide ne modifie pas la valeur déjà
+// enregistrée (on n'écrase jamais une clé existante par erreur avec un
+// formulaire soumis sans rien y avoir saisi). « Retirer les clés
+// enregistrées » les efface explicitement.
+export async function saveStripeSettingsAction(formData: FormData) {
+  await requireSession();
+  if (formData.get("retirer") === "1") {
+    await setSetting("stripeSecretKey", "");
+    await setSetting("stripeWebhookSecret", "");
+  } else {
+    const secretKey = str(formData, "stripeSecretKey", 300);
+    if (secretKey) await setSetting("stripeSecretKey", secretKey);
+    const webhookSecret = str(formData, "stripeWebhookSecret", 300);
+    if (webhookSecret) await setSetting("stripeWebhookSecret", webhookSecret);
+  }
+  revalidatePath("/admin/parametres");
+  redirect("/admin/parametres?ok=1");
+}

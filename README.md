@@ -187,56 +187,52 @@ avant paiement).
 
 ### Connecter Stripe
 
-Deux identifiants à récupérer dans votre
-[tableau de bord Stripe](https://dashboard.stripe.com/) et à renseigner dans
-le fichier `.env` du serveur — jamais depuis l'interface d'administration :
-ce sont des identifiants sensibles, au même titre que `SESSION_SECRET`.
+Tout se fait depuis **Réglages → Paiement en ligne**, aucun accès au serveur
+n'est nécessaire.
 
 1. **Créer un compte Stripe** (si ce n'est pas déjà fait) sur
    [dashboard.stripe.com](https://dashboard.stripe.com/register).
 
-2. **Récupérer la clé secrète** : *Développeurs → Clés API* → copier la
-   « Clé secrète » (`sk_test_...` en mode test, `sk_live_...` en mode
-   production — commencez par le mode test, visible via le bouton en haut à
-   droite du tableau de bord). Ajouter dans `.env` :
-   ```
-   STRIPE_SECRET_KEY="sk_test_votre_cle"
-   ```
+2. **Récupérer la clé secrète** : dans le tableau de bord Stripe,
+   *Développeurs → Clés API* → copier la « Clé secrète » (`sk_test_...` en
+   mode test, `sk_live_...` en mode production — commencez par le mode test,
+   basculable via le bouton en haut à droite du tableau de bord). La coller
+   dans Réglages → Paiement en ligne, champ « Clé secrète Stripe », puis
+   Enregistrer.
 
 3. **Créer le webhook** : *Développeurs → Webhooks → Ajouter un endpoint*.
-   - Adresse à renseigner : `https://votre-domaine/api/stripe/webhook`
-     (affichée automatiquement dans Réglages → Paiement en ligne une fois
-     `STRIPE_SECRET_KEY` configurée) ;
+   - Adresse à renseigner : copiez celle affichée dans Réglages → Paiement
+     en ligne (`.../api/stripe/webhook`) ;
    - Évènements à écouter : `checkout.session.completed`,
      `checkout.session.async_payment_succeeded`,
      `checkout.session.expired`, `checkout.session.async_payment_failed` ;
    - Une fois créé, Stripe affiche un « Secret de signature »
-     (`whsec_...`) : l'ajouter dans `.env` :
-   ```
-   STRIPE_WEBHOOK_SECRET="whsec_votre_secret"
-   ```
+     (`whsec_...`) : le coller dans le champ « Secret de signature du
+     webhook » de la même page, puis Enregistrer.
 
-4. **Redéployer** pour que les nouvelles variables soient prises en compte :
-   ```bash
-   npm run deploy
-   pm2 restart bos-bop --update-env
-   ```
-   (`--update-env` est important : sans lui, pm2 réutilise les anciennes
-   variables d'environnement et ne verra pas les nouvelles clés.)
-
-5. **Vérifier** : Réglages → Paiement en ligne doit afficher « Configurée »
+4. **Vérifier** : Réglages → Paiement en ligne doit afficher « Configurée »
    pour les deux lignes. Passez une commande de test sur `/livres` avec une
    [carte de test Stripe](https://docs.stripe.com/testing#cards) (ex.
    `4242 4242 4242 4242`, n'importe quelle date future, n'importe quel CVC) :
    la commande doit apparaître « Payée » dans Commandes après quelques
    secondes.
 
-6. **Passer en production** quand vous êtes prêt : dans le tableau de bord
+5. **Passer en production** quand vous êtes prêt : dans le tableau de bord
    Stripe, basculez en mode production (bouton en haut à droite), récupérez
    la clé secrète et recréez un webhook *en mode production* (les clés et
    webhooks de test et de production sont distincts) ; remplacez les deux
-   variables dans `.env` par leurs équivalents `sk_live_...` / `whsec_...`,
-   puis redéployez comme à l'étape 4.
+   valeurs dans Réglages → Paiement en ligne par leurs équivalents
+   `sk_live_...` / `whsec_...`.
+
+**Retirer les clés enregistrées** : bouton dédié en bas du même formulaire
+(désactive le paiement en ligne, la boutique repasse en circuit manuel).
+
+**Alternative pour un déploiement entièrement piloté par fichiers de
+configuration** (CI/CD, infrastructure as code…) : les variables
+d'environnement `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` (voir
+`.env.example`) restent prises en charge et sont prioritaires sur les
+réglages enregistrés depuis le tableau de bord — dans ce cas les champs du
+formulaire ci-dessus sont désactivés (la page l'indique).
 
 ## Structure du dépôt
 

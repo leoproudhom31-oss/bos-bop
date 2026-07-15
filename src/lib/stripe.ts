@@ -1,32 +1,46 @@
 import Stripe from "stripe";
+import { getSetting } from "./settings";
 
 /**
- * Client Stripe. Clé secrète et secret de webhook lus depuis l'environnement
- * (jamais depuis la base de données) — même logique que SESSION_SECRET : ce
- * sont des identifiants sensibles, pas un réglage de contenu du site.
+ * Client Stripe. Clé secrète et secret de webhook configurables depuis le
+ * tableau de bord (Réglages → Paiement en ligne), stockés dans les réglages
+ * du site (table Setting) au même titre qu'un autre réglage.
  *
- * Tant que STRIPE_SECRET_KEY n'est pas renseignée, la boutique reste
- * pleinement fonctionnelle : le paiement en ligne bascule automatiquement
- * sur le circuit « commande enregistrée, réglage organisé manuellement »
- * (voir src/app/api/checkout/route.ts).
+ * Les variables d'environnement STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET
+ * restent prioritaires si elles sont définies (utile pour un déploiement
+ * géré entièrement par fichiers de configuration) ; sinon, la valeur
+ * enregistrée depuis l'administration est utilisée.
+ *
+ * Tant qu'aucune des deux n'est renseignée, la boutique reste pleinement
+ * fonctionnelle : le paiement en ligne bascule automatiquement sur le
+ * circuit « commande enregistrée, réglage organisé manuellement » (voir
+ * src/app/api/checkout/route.ts).
  */
 
-let client: Stripe | null = null;
-
-export function isStripeConfigured(): boolean {
-  return !!process.env.STRIPE_SECRET_KEY;
+async function secretKey(): Promise<string> {
+  return process.env.STRIPE_SECRET_KEY || (await getSetting("stripeSecretKey", ""));
 }
 
-export function getStripeClient(): Stripe {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error("STRIPE_SECRET_KEY n'est pas configurée.");
-  }
-  if (!client) {
-    client = new Stripe(process.env.STRIPE_SECRET_KEY);
-  }
-  return client;
+async function webhookSecret(): Promise<string> {
+  return process.env.STRIPE_WEBHOOK_SECRET || (await getSetting("stripeWebhookSecret", ""));
 }
 
-export function isStripeWebhookConfigured(): boolean {
-  return !!process.env.STRIPE_WEBHOOK_SECRET;
+export async function isStripeConfigured(): Promise<boolean> {
+  return !!(await secretKey());
+}
+
+export async function isStripeWebhookConfigured(): Promise<boolean> {
+  return !!(await webhookSecret());
+}
+
+export async function getStripeClient(): Promise<Stripe> {
+  const key = await secretKey();
+  if (!key) throw new Error("Aucune clé secrète Stripe configurée.");
+  return new Stripe(key);
+}
+
+export async function getStripeWebhookSecret(): Promise<string> {
+  const secret = await webhookSecret();
+  if (!secret) throw new Error("Aucun secret de webhook Stripe configuré.");
+  return secret;
 }
