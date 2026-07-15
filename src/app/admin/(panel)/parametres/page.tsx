@@ -1,6 +1,6 @@
 import { getSetting } from "@/lib/settings";
 import { DEFAULT_SITE_URL } from "@/lib/constants";
-import { saveSettingsAction, changePasswordAction } from "@/lib/admin-actions";
+import { saveSettingsAction, changePasswordAction, saveStripeSettingsAction } from "@/lib/admin-actions";
 import { isStripeConfigured, isStripeWebhookConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +24,16 @@ export default async function SettingsPage({
     getSetting("siteUrl", DEFAULT_SITE_URL),
     getSetting("shopEnabled", "0"),
   ]);
-  const stripeKeyOk = isStripeConfigured();
-  const stripeWebhookOk = isStripeWebhookConfigured();
+  const [stripeKeyOk, stripeWebhookOk] = await Promise.all([
+    isStripeConfigured(),
+    isStripeWebhookConfigured(),
+  ]);
   const webhookUrl = `${siteUrl.replace(/\/+$/, "")}/api/stripe/webhook`;
+  // Une variable d'environnement, si définie, l'emporte toujours sur le
+  // réglage enregistré ici (voir src/lib/stripe.ts) : le signaler pour ne
+  // pas laisser croire qu'un enregistrement depuis cette page a un effet.
+  const stripeKeyLockedByEnv = !!process.env.STRIPE_SECRET_KEY;
+  const stripeWebhookLockedByEnv = !!process.env.STRIPE_WEBHOOK_SECRET;
 
   return (
     <>
@@ -86,15 +93,76 @@ export default async function SettingsPage({
         )}
         <p className="subtitle">
           Adresse de webhook à renseigner dans le tableau de bord Stripe :{" "}
-          <code className="slug">{webhookUrl}</code>
+          <code className="slug">{webhookUrl}</code> — marche à suivre complète dans le README,
+          section « Connecter Stripe ».
         </p>
-        <p className="subtitle">
-          Ces clés sont des identifiants sensibles : elles se configurent dans le fichier{" "}
-          <code className="slug">.env</code> du serveur (variables{" "}
-          <code className="slug">STRIPE_SECRET_KEY</code> et{" "}
-          <code className="slug">STRIPE_WEBHOOK_SECRET</code>), pas depuis cette page. Marche à
-          suivre détaillée dans le README du projet, section « Connecter Stripe ».
-        </p>
+
+        <form action={saveStripeSettingsAction}>
+          <label className="champ">
+            Clé secrète Stripe{" "}
+            <span className="aide">
+              ({stripeKeyOk ? "déjà enregistrée — " : ""}laisser vide pour{" "}
+              {stripeKeyOk ? "ne pas la changer" : "ne rien modifier"})
+            </span>
+            <input
+              type="password"
+              name="stripeSecretKey"
+              placeholder={stripeKeyOk ? "••••••••••••••••••••" : "sk_live_… ou sk_test_…"}
+              autoComplete="off"
+              disabled={stripeKeyLockedByEnv}
+              maxLength={300}
+            />
+          </label>
+          {stripeKeyLockedByEnv && (
+            <p className="subtitle">
+              Une variable d&apos;environnement <code className="slug">STRIPE_SECRET_KEY</code> est
+              définie sur le serveur : elle est utilisée en priorité et ce champ reste sans effet
+              tant qu&apos;elle est présente. Retirez-la du fichier <code className="slug">.env</code>{" "}
+              si vous préférez gérer la clé depuis cette page.
+            </p>
+          )}
+
+          <label className="champ">
+            Secret de signature du webhook{" "}
+            <span className="aide">
+              ({stripeWebhookOk ? "déjà enregistré — " : ""}laisser vide pour{" "}
+              {stripeWebhookOk ? "ne pas le changer" : "ne rien modifier"})
+            </span>
+            <input
+              type="password"
+              name="stripeWebhookSecret"
+              placeholder={stripeWebhookOk ? "••••••••••••••••••••" : "whsec_…"}
+              autoComplete="off"
+              disabled={stripeWebhookLockedByEnv}
+              maxLength={300}
+            />
+          </label>
+          {stripeWebhookLockedByEnv && (
+            <p className="subtitle">
+              Une variable d&apos;environnement <code className="slug">STRIPE_WEBHOOK_SECRET</code>{" "}
+              est définie sur le serveur : elle est utilisée en priorité et ce champ reste sans
+              effet tant qu&apos;elle est présente.
+            </p>
+          )}
+
+          <button type="submit" className="btn principal" disabled={stripeKeyLockedByEnv && stripeWebhookLockedByEnv}>
+            Enregistrer
+          </button>
+          {(stripeKeyOk || stripeWebhookOk) && (
+            <>
+              {" "}
+              <button
+                type="submit"
+                name="retirer"
+                value="1"
+                className="btn secondaire"
+                formNoValidate
+              >
+                Retirer les clés enregistrées
+              </button>
+            </>
+          )}
+        </form>
       </div>
 
       <div className="panel">

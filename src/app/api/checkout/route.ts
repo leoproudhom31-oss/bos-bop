@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     return Response.redirect(new URL("/panier", request.url), 303);
   }
 
-  const useStripe = isStripeConfigured();
+  const useStripe = await isStripeConfigured();
 
   const order = await prisma.order.create({
     data: {
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
   const siteUrl = (await getSetting("siteUrl", DEFAULT_SITE_URL)).replace(/\/+$/, "");
   try {
-    const stripe = getStripeClient();
+    const stripe = await getStripeClient();
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: email,

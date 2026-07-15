@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/db";
-import { getStripeClient, isStripeWebhookConfigured } from "@/lib/stripe";
+import { getStripeClient, getStripeWebhookSecret, isStripeWebhookConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 // (pas de parsing JSON) : la vérification de signature Stripe porte sur les
 // octets exacts envoyés, un corps reconstruit après parsing échouerait.
 export async function POST(request: NextRequest) {
-  if (!isStripeWebhookConfigured()) {
-    return Response.json({ error: "Webhook Stripe non configuré (STRIPE_WEBHOOK_SECRET)." }, { status: 501 });
+  if (!(await isStripeWebhookConfigured())) {
+    return Response.json({ error: "Webhook Stripe non configuré." }, { status: 501 });
   }
 
   const signature = request.headers.get("stripe-signature");
@@ -21,11 +21,8 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   let event: Stripe.Event;
   try {
-    event = getStripeClient().webhooks.constructEvent(
-      rawBody,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!,
-    );
+    const [stripe, webhookSecret] = await Promise.all([getStripeClient(), getStripeWebhookSecret()]);
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (error) {
     console.error("Signature Stripe invalide :", error);
     return Response.json({ error: "Signature invalide" }, { status: 400 });

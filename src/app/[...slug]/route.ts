@@ -79,7 +79,7 @@ async function renderShopRoute(
     const html = await renderVirtualPage({
       path: "commande",
       shortTitle: "Commande",
-      contentHtml: viewCheckout(lines, error, isStripeConfigured()),
+      contentHtml: viewCheckout(lines, error, await isStripeConfigured()),
     });
     return new Response(html, { headers: HTML_HEADERS });
   }
