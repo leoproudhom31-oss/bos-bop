@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatPrice } from "@/lib/shop";
 import { formatDate, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/format";
-import { updateOrderStatusAction } from "@/lib/admin-actions";
+import { updateOrderStatusAction, checkOrderPaymentAction } from "@/lib/admin-actions";
+import { reconcileOrderPayment } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,17 @@ export default async function OrderDetailPage({
     include: { items: { include: { product: true } } },
   });
   if (!order) notFound();
+
+  // Commande en attente d'un paiement Stripe : on revérifie auprès de Stripe
+  // au moment de l'affichage. Si le paiement est bien passé, le statut est mis
+  // à jour ici même — sans dépendre du webhook (voir src/lib/orders.ts).
+  if (order.paymentStatus === "PENDING") {
+    const reconciled = await reconcileOrderPayment(order.reference);
+    if (reconciled) {
+      order.paymentStatus = reconciled.paymentStatus;
+      order.status = reconciled.status;
+    }
+  }
 
   return (
     <>
@@ -79,11 +91,19 @@ export default async function OrderDetailPage({
             {order.paymentStatus === "PAID"
               ? "Paiement reçu automatiquement via Stripe."
               : order.paymentStatus === "PENDING"
-                ? "Le client a été redirigé vers Stripe pour payer ; en attente de confirmation."
+                ? "Le client a été redirigé vers Stripe pour payer ; en attente de confirmation. Le statut est revérifié auprès de Stripe à chaque ouverture de cette page."
                 : order.paymentStatus === "FAILED"
                   ? "Le paiement Stripe a échoué ou a expiré : contactez le client si besoin."
                   : "Paiement en ligne non utilisé pour cette commande : contactez le client pour convenir du règlement, puis passez la commande en « Confirmée »."}
           </p>
+          {order.paymentStatus === "PENDING" && (
+            <form action={checkOrderPaymentAction} style={{ marginTop: 8 }}>
+              <input type="hidden" name="id" value={order.id} />
+              <button type="submit" className="btn secondaire petit">
+                Vérifier le paiement maintenant
+              </button>
+            </form>
+          )}
         </div>
       </div>
 
