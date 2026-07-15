@@ -3,10 +3,9 @@ import { prisma } from "@/lib/db";
 import { formString } from "@/lib/forms";
 import { readCart } from "@/lib/cart";
 import { resolveCart, cartTotalCents } from "@/lib/shop";
-import { isShopEnabled, getSetting } from "@/lib/settings";
+import { isShopEnabled } from "@/lib/settings";
 import { isStripeConfigured, getStripeClient } from "@/lib/stripe";
-import { DEFAULT_SITE_URL } from "@/lib/constants";
-import { seeOther } from "@/lib/http";
+import { seeOther, getPublicOrigin } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +94,10 @@ export async function POST(request: NextRequest) {
     return seeOther(confirmationPath);
   }
 
-  const siteUrl = (await getSetting("siteUrl", DEFAULT_SITE_URL)).replace(/\/+$/, "");
+  // Origine dérivée de la requête elle-même (jamais du réglage "Adresse
+  // publique du site", qui se périme dès que le site change de domaine —
+  // voir getPublicOrigin dans src/lib/http.ts).
+  const siteUrl = getPublicOrigin(request);
   try {
     const stripe = await getStripeClient();
     const session = await stripe.checkout.sessions.create({
