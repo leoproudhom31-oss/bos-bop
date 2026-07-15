@@ -9,7 +9,7 @@ import { useState } from "react";
 
 type Props = {
   action: (formData: FormData) => void | Promise<void>;
-  initial: { phone: string; facebookUrl: string; linkedinUrl: string };
+  initial: { phone: string; facebookUrl: string; linkedinUrl: string; shareBarEnabled: boolean };
 };
 
 const ORIGINAL_PHONE = "06.48.69.20.36";
@@ -36,6 +36,25 @@ const FacebookIcon = () => (
   </svg>
 );
 
+const TwitterIcon = () => (
+  <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" fill="#fff">
+    <path d="M28 8.557a10 10 0 0 1-2.828.775 4.93 4.93 0 0 0 2.166-2.725 9.7 9.7 0 0 1-3.13 1.194 4.92 4.92 0 0 0-3.593-1.55 4.924 4.924 0 0 0-4.794 6.049c-4.09-.21-7.72-2.17-10.15-5.15a4.94 4.94 0 0 0-.665 2.477c0 1.71.87 3.214 2.19 4.1a5 5 0 0 1-2.23-.616v.06c0 2.39 1.7 4.38 3.952 4.83-.414.115-.85.174-1.297.174q-.476-.001-.928-.086a4.935 4.935 0 0 0 4.6 3.42 9.9 9.9 0 0 1-6.114 2.107q-.597 0-1.175-.068a13.95 13.95 0 0 0 7.55 2.213c9.056 0 14.01-7.507 14.01-14.013q0-.32-.015-.637c.96-.695 1.795-1.56 2.455-2.55z" />
+  </svg>
+);
+
+const SmallLinkedinIcon = () => (
+  <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" fill="#fff">
+    <path d="M6.227 12.61h4.19v13.48h-4.19zm2.095-6.7a2.43 2.43 0 0 1 0 4.86c-1.344 0-2.428-1.09-2.428-2.43s1.084-2.43 2.428-2.43m4.72 6.7h4.02v1.84h.058c.56-1.058 1.927-2.176 3.965-2.176 4.238 0 5.02 2.792 5.02 6.42v7.395h-4.183v-6.56c0-1.564-.03-3.574-2.178-3.574-2.18 0-2.514 1.7-2.514 3.46v6.668h-4.187z" />
+  </svg>
+);
+
+const ShareMoreIcon = () => (
+  <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" fill="#fff">
+    <path d="M14 7h4v18h-4z" />
+    <path d="M7 14h18v4H7z" />
+  </svg>
+);
+
 function PreviewFrame({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginTop: 12 }}>
@@ -49,10 +68,29 @@ function PreviewFrame({ label, children }: { label: string; children: React.Reac
   );
 }
 
+function ShareIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 28,
+        height: 28,
+        borderRadius: 4,
+        background: GOLD,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export default function WidgetsForm({ action, initial }: Props) {
   const [phone, setPhone] = useState(initial.phone);
   const [facebookUrl, setFacebookUrl] = useState(initial.facebookUrl);
   const [linkedinUrl, setLinkedinUrl] = useState(initial.linkedinUrl);
+  const [shareBarEnabled, setShareBarEnabled] = useState(initial.shareBarEnabled);
 
   const phoneDisplay = phone.trim() || ORIGINAL_PHONE;
 
@@ -202,6 +240,41 @@ export default function WidgetsForm({ action, initial }: Props) {
           >
             {linkedinUrl.trim() || "Lien LinkedIn d'origine conservé"}
           </a>
+        </PreviewFrame>
+      </div>
+
+      {/* --- Barre de partage (en-tête) --- */}
+      <div className="panel">
+        <h2 style={{ marginTop: 0 }}>Barre de partage</h2>
+        <label className="champ-inline">
+          <input
+            type="checkbox"
+            name="widgetShareBarEnabled"
+            value="1"
+            checked={shareBarEnabled}
+            onChange={(e) => setShareBarEnabled(e.target.checked)}
+          />
+          Afficher la barre « Facebook / Twitter / LinkedIn / Partager » dans l&apos;en-tête
+        </label>
+        <p className="subtitle">
+          Les icônes Facebook, Twitter et LinkedIn de cette barre pointaient jusqu&apos;ici vers des
+          liens morts (elles dépendaient d&apos;un script tiers jamais chargé) : elles partagent
+          maintenant vraiment la page affichée, sans dépendance externe. Décocher retire entièrement
+          la barre du site.
+        </p>
+        <PreviewFrame label="Aperçu de l'en-tête">
+          {shareBarEnabled ? (
+            <div style={{ display: "flex", gap: 6 }}>
+              <ShareIcon><FacebookIcon /></ShareIcon>
+              <ShareIcon><TwitterIcon /></ShareIcon>
+              <ShareIcon><SmallLinkedinIcon /></ShareIcon>
+              <ShareIcon><ShareMoreIcon /></ShareIcon>
+            </div>
+          ) : (
+            <span style={{ color: "#b9c2c9", fontStyle: "italic", fontSize: 14 }}>
+              Barre masquée
+            </span>
+          )}
         </PreviewFrame>
       </div>
 

@@ -16,6 +16,7 @@ export type WidgetSettings = {
   phone: string; // ex. "06.48.69.20.36"
   facebookUrl: string;
   linkedinUrl: string;
+  shareBarEnabled: boolean;
 };
 
 // Valeurs d'origine du site, telles qu'elles apparaissent dans templates/ —
@@ -50,6 +51,27 @@ const FACEBOOK_WIDGET_RE = /<div class="fb-page fb_iframe_widget"[\s\S]*?<\/ifra
 
 const LINKEDIN_URL_RE = new RegExp(ORIGINAL_LINKEDIN_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
+// Barre « Partager » (en-tête, icônes Facebook/Twitter/LinkedIn/+) : script
+// tiers AddToAny jamais chargé sur ce site (même logique que le SDK
+// Facebook/reCAPTCHA — pas de dépendance externe non fiable). Sans lui, les
+// trois premiers boutons pointent vers des ancres mortes (`href="/#facebook"`
+// etc., jamais réécrites). On les remplace par de vrais liens de partage
+// (ouverts dans un nouvel onglet, sans aucun script tiers), en réutilisant
+// l'URL de la page déjà calculée pour le bouton « + » (seul fonctionnel
+// à l'origine, via {{SHARE_HREF}} dans shell.mjs). Corrigé
+// inconditionnellement (ne change rien à l'octet vérifié par
+// extract-legacy.mjs, qui n'appelle jamais cette fonction — voir plus haut).
+const SHARE_PAGE_URL_RE = /addtoany\.com\/share#url=([^&]+)&amp;title=/;
+const SHARE_FACEBOOK_HREF_RE = /(class="a2a_button_facebook" href=")\/#facebook(")/;
+const SHARE_TWITTER_HREF_RE = /(class="a2a_button_twitter" href=")\/#twitter(")/;
+const SHARE_LINKEDIN_HREF_RE = /(class="a2a_button_linkedin" href=")\/#linkedin(")/;
+
+// Bloc complet de la barre de partage (voir templates/header.html) : du
+// conteneur bd-joomlaposition-37 jusqu'à ses 3 </div> de fermeture, juste
+// après le </span> du kit d'icônes AddToAny.
+const SHARE_BAR_RE =
+  /<div class="bd-joomlaposition-37[\s\S]*?<\/span>\s*<\/div>\s*<\/div>\s*<\/div>/;
+
 function facebookButtonHtml(url: string): string {
   const href = escapeHtml(url);
   // Enveloppé dans un conteneur centré : le bouton (inline-flex, donc de
@@ -83,6 +105,19 @@ export function applyWidgetCustomization(html: string, widgets: WidgetSettings):
 
   if (widgets.linkedinUrl.trim()) {
     out = out.replace(LINKEDIN_URL_RE, escapeHtml(widgets.linkedinUrl.trim()));
+  }
+
+  if (widgets.shareBarEnabled) {
+    const pageUrlMatch = out.match(SHARE_PAGE_URL_RE);
+    if (pageUrlMatch) {
+      const pageUrl = decodeURIComponent(pageUrlMatch[1]);
+      out = out
+        .replace(SHARE_FACEBOOK_HREF_RE, `$1https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}$2`)
+        .replace(SHARE_TWITTER_HREF_RE, `$1https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}$2`)
+        .replace(SHARE_LINKEDIN_HREF_RE, `$1https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}$2`);
+    }
+  } else {
+    out = out.replace(SHARE_BAR_RE, "");
   }
 
   return out;

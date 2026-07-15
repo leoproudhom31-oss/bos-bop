@@ -31,6 +31,7 @@ export async function saveWidgetsAction(formData: FormData) {
   await setSetting("widgetPhone", str(formData, "widgetPhone", 30));
   await setSetting("widgetFacebookUrl", str(formData, "widgetFacebookUrl", 300));
   await setSetting("widgetLinkedinUrl", str(formData, "widgetLinkedinUrl", 300));
+  await setSetting("widgetShareBarEnabled", formData.get("widgetShareBarEnabled") === "1" ? "1" : "0");
   revalidatePath("/admin/widgets");
   revalidatePath("/", "layout");
   redirect("/admin/widgets?ok=1");
