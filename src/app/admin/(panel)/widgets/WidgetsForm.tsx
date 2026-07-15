@@ -9,7 +9,15 @@ import { useState } from "react";
 
 type Props = {
   action: (formData: FormData) => void | Promise<void>;
-  initial: { phone: string; facebookUrl: string; linkedinUrl: string; shareBarEnabled: boolean };
+  initial: {
+    phone: string;
+    facebookUrl: string;
+    linkedinUrl: string;
+    shareBarEnabled: boolean;
+    shareFacebookUrl: string;
+    shareTwitterUrl: string;
+    shareLinkedinUrl: string;
+  };
 };
 
 const ORIGINAL_PHONE = "06.48.69.20.36";
@@ -91,6 +99,9 @@ export default function WidgetsForm({ action, initial }: Props) {
   const [facebookUrl, setFacebookUrl] = useState(initial.facebookUrl);
   const [linkedinUrl, setLinkedinUrl] = useState(initial.linkedinUrl);
   const [shareBarEnabled, setShareBarEnabled] = useState(initial.shareBarEnabled);
+  const [shareFacebookUrl, setShareFacebookUrl] = useState(initial.shareFacebookUrl);
+  const [shareTwitterUrl, setShareTwitterUrl] = useState(initial.shareTwitterUrl);
+  const [shareLinkedinUrl, setShareLinkedinUrl] = useState(initial.shareLinkedinUrl);
 
   const phoneDisplay = phone.trim() || ORIGINAL_PHONE;
 
@@ -258,9 +269,8 @@ export default function WidgetsForm({ action, initial }: Props) {
         </label>
         <p className="subtitle">
           Les icônes Facebook, Twitter et LinkedIn de cette barre pointaient jusqu&apos;ici vers des
-          liens morts (elles dépendaient d&apos;un script tiers jamais chargé) : elles partagent
-          maintenant vraiment la page affichée, sans dépendance externe. Décocher retire entièrement
-          la barre du site.
+          liens morts (elles dépendaient d&apos;un script tiers jamais chargé). Décocher retire
+          entièrement la barre du site.
         </p>
         <PreviewFrame label="Aperçu de l'en-tête">
           {shareBarEnabled ? (
@@ -276,6 +286,49 @@ export default function WidgetsForm({ action, initial }: Props) {
             </span>
           )}
         </PreviewFrame>
+
+        {shareBarEnabled && (
+          <>
+            <p className="subtitle" style={{ marginTop: 18, marginBottom: 4 }}>
+              <strong>Destination de chaque icône.</strong> Laisser vide = l&apos;icône partage la
+              page consultée (comportement par défaut). Renseigner une adresse = l&apos;icône y
+              renvoie directement (par exemple votre page Facebook).
+            </p>
+            <label className="champ">
+              Icône Facebook
+              <input
+                type="url"
+                name="widgetShareFacebookUrl"
+                value={shareFacebookUrl}
+                onChange={(e) => setShareFacebookUrl(e.target.value)}
+                placeholder="Par défaut : partage de la page"
+                maxLength={300}
+              />
+            </label>
+            <label className="champ">
+              Icône Twitter / X
+              <input
+                type="url"
+                name="widgetShareTwitterUrl"
+                value={shareTwitterUrl}
+                onChange={(e) => setShareTwitterUrl(e.target.value)}
+                placeholder="Par défaut : partage de la page"
+                maxLength={300}
+              />
+            </label>
+            <label className="champ">
+              Icône LinkedIn
+              <input
+                type="url"
+                name="widgetShareLinkedinUrl"
+                value={shareLinkedinUrl}
+                onChange={(e) => setShareLinkedinUrl(e.target.value)}
+                placeholder="Par défaut : partage de la page"
+                maxLength={300}
+              />
+            </label>
+          </>
+        )}
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>

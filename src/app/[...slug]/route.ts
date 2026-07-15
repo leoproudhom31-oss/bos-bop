@@ -28,6 +28,11 @@ export const dynamic = "force-dynamic";
 const CONTACT_SUCCESS_HTML =
   "<p><b>Votre message</b><b> </b><b>a bien</b><b> </b><b>été envoyé.</b></p>";
 
+// Échec de la vérification anti-robot (reCAPTCHA) : contrairement au honeypot,
+// on l'indique pour qu'un visiteur légitime puisse simplement réessayer.
+const CONTACT_RECAPTCHA_ERROR_HTML =
+  '<p style="color:#c0392b;"><b>La vérification anti-robot n\'a pas abouti.</b> Merci de cocher la case «&nbsp;Je ne suis pas un robot&nbsp;», puis de renvoyer votre message.</p>';
+
 async function renderShopRoute(
   request: NextRequest,
   parts: string[],
@@ -123,9 +128,13 @@ export async function GET(
       // Les pages dépubliées restent visibles pour un administrateur connecté
       if (!page.published && !(await getSession())) return renderNotFound();
       const sent = request.nextUrl.searchParams.get("sent") === "1";
-      const html = await renderPage(page, {
-        injectFormMessage: sent ? CONTACT_SUCCESS_HTML : undefined,
-      });
+      const erreur = request.nextUrl.searchParams.get("erreur");
+      const formMessage = sent
+        ? CONTACT_SUCCESS_HTML
+        : erreur === "recaptcha"
+          ? CONTACT_RECAPTCHA_ERROR_HTML
+          : undefined;
+      const html = await renderPage(page, { injectFormMessage: formMessage });
       return new Response(html, { headers: HTML_HEADERS });
     }
   }

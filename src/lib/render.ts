@@ -13,6 +13,7 @@ import { renderShell, escapeHtml } from "./shell.mjs";
 import { editorScriptHtml } from "./editor-script";
 import { ICON_FIX_STYLE } from "./icon-fix";
 import { applyWidgetCustomization } from "./widgets";
+import { applyContactRecaptcha, getRecaptchaSiteKey } from "./recaptcha";
 
 export const HTML_HEADERS = {
   "content-type": "text/html; charset=utf-8",
@@ -101,12 +102,27 @@ export function applyHeroCustomization(
 /** Assemble le document HTML complet d'une page (gabarit + contenu + menu). */
 export async function renderDocument(page: ShellPage): Promise<string> {
   const menu = await getMenuEntries();
-  const [siteUrl, phone, facebookUrl, linkedinUrl, shareBarEnabled, shopEnabled] = await Promise.all([
+  const [
+    siteUrl,
+    phone,
+    facebookUrl,
+    linkedinUrl,
+    shareBarEnabled,
+    shareFacebookUrl,
+    shareTwitterUrl,
+    shareLinkedinUrl,
+    recaptchaSiteKey,
+    shopEnabled,
+  ] = await Promise.all([
     getSetting("siteUrl", DEFAULT_SITE_URL),
     getSetting("widgetPhone", ""),
     getSetting("widgetFacebookUrl", ""),
     getSetting("widgetLinkedinUrl", ""),
     getSetting("widgetShareBarEnabled", "1"),
+    getSetting("widgetShareFacebookUrl", ""),
+    getSetting("widgetShareTwitterUrl", ""),
+    getSetting("widgetShareLinkedinUrl", ""),
+    getRecaptchaSiteKey(),
     getSetting("shopEnabled", "0"),
   ]);
   // Pastille « Mon panier » de l'en-tête (avec compteur d'articles) :
@@ -122,12 +138,19 @@ export async function renderDocument(page: ShellPage): Promise<string> {
     menu,
     { siteUrl },
   );
-  return applyWidgetCustomization(html, {
+  const withWidgets = applyWidgetCustomization(html, {
     phone,
     facebookUrl,
     linkedinUrl,
     shareBarEnabled: shareBarEnabled !== "0",
+    shareFacebookUrl,
+    shareTwitterUrl,
+    shareLinkedinUrl,
   });
+  // Remplace le reCAPTCHA invisible cassé d'origine (page de contact) par une
+  // case reCAPTCHA v2 si des clés sont configurées ; sinon retire simplement le
+  // widget cassé. No-op sur toutes les autres pages.
+  return applyContactRecaptcha(withWidgets, recaptchaSiteKey);
 }
 
 /** Rendu d'une page stockée en base. */

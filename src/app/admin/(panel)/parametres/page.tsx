@@ -1,7 +1,13 @@
 import { getSetting } from "@/lib/settings";
 import { DEFAULT_SITE_URL } from "@/lib/constants";
-import { saveSettingsAction, changePasswordAction, saveStripeSettingsAction } from "@/lib/admin-actions";
+import {
+  saveSettingsAction,
+  changePasswordAction,
+  saveStripeSettingsAction,
+  saveRecaptchaSettingsAction,
+} from "@/lib/admin-actions";
 import { isStripeConfigured, isStripeWebhookConfigured } from "@/lib/stripe";
+import { getRecaptchaSiteKey, isRecaptchaSecretConfigured } from "@/lib/recaptcha";
 import { getPublicOriginFromHeaders } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -25,11 +31,16 @@ export default async function SettingsPage({
     getSetting("siteUrl", DEFAULT_SITE_URL),
     getSetting("shopEnabled", "0"),
   ]);
-  const [stripeKeyOk, stripeWebhookOk, publicOrigin] = await Promise.all([
-    isStripeConfigured(),
-    isStripeWebhookConfigured(),
-    getPublicOriginFromHeaders(),
-  ]);
+  const [stripeKeyOk, stripeWebhookOk, publicOrigin, recaptchaSiteKey, recaptchaSecretOk] =
+    await Promise.all([
+      isStripeConfigured(),
+      isStripeWebhookConfigured(),
+      getPublicOriginFromHeaders(),
+      getRecaptchaSiteKey(),
+      isRecaptchaSecretConfigured(),
+    ]);
+  const recaptchaSiteLockedByEnv = !!process.env.RECAPTCHA_SITE_KEY;
+  const recaptchaSecretLockedByEnv = !!process.env.RECAPTCHA_SECRET_KEY;
   // Dérivée de la requête d'administration en cours (adresse actuellement
   // utilisée pour accéder au site), jamais du réglage "Adresse publique du
   // site" ci-dessus : celui-ci se périme dès que le site change de domaine
@@ -159,6 +170,101 @@ export default async function SettingsPage({
             Enregistrer
           </button>
           {(stripeKeyOk || stripeWebhookOk) && (
+            <>
+              {" "}
+              <button
+                type="submit"
+                name="retirer"
+                value="1"
+                className="btn secondaire"
+                formNoValidate
+              >
+                Retirer les clés enregistrées
+              </button>
+            </>
+          )}
+        </form>
+      </div>
+
+      <div className="panel">
+        <h2>Protection anti-robot du formulaire de contact (reCAPTCHA v2)</h2>
+        <p>
+          Clé de site :{" "}
+          <span className={`badge ${recaptchaSiteKey ? "vert" : "gris"}`}>
+            {recaptchaSiteKey ? "Configurée" : "Non configurée"}
+          </span>{" "}
+          Clé secrète :{" "}
+          <span className={`badge ${recaptchaSecretOk ? "vert" : "gris"}`}>
+            {recaptchaSecretOk ? "Configurée" : "Non configurée"}
+          </span>
+        </p>
+        {recaptchaSiteKey && recaptchaSecretOk ? (
+          <p className="subtitle">
+            Une case «&nbsp;Je ne suis pas un robot&nbsp;» est affichée dans le formulaire de
+            contact et vérifiée à chaque envoi.
+          </p>
+        ) : (
+          <p className="subtitle">
+            Tant qu&apos;aucune clé n&apos;est configurée, le formulaire fonctionne normalement et
+            reste protégé par un champ piège invisible et une limite de fréquence. Renseignez les
+            deux clés pour activer en plus la case reCAPTCHA. Il faut créer un site de type{" "}
+            <strong>reCAPTCHA v2 « Je ne suis pas un robot&nbsp;»</strong> sur{" "}
+            <code className="slug">google.com/recaptcha/admin</code> (marche à suivre complète dans
+            le README, section «&nbsp;Connecter reCAPTCHA&nbsp;»).
+          </p>
+        )}
+
+        <form action={saveRecaptchaSettingsAction}>
+          <label className="champ">
+            Clé de site <span className="aide">(publique)</span>
+            <input
+              type="text"
+              name="recaptchaSiteKey"
+              defaultValue={recaptchaSiteKey}
+              placeholder="6L…"
+              autoComplete="off"
+              disabled={recaptchaSiteLockedByEnv}
+              maxLength={300}
+            />
+          </label>
+          {recaptchaSiteLockedByEnv && (
+            <p className="subtitle">
+              Une variable d&apos;environnement <code className="slug">RECAPTCHA_SITE_KEY</code> est
+              définie sur le serveur : elle est utilisée en priorité et ce champ reste sans effet.
+            </p>
+          )}
+
+          <label className="champ">
+            Clé secrète{" "}
+            <span className="aide">
+              ({recaptchaSecretOk ? "déjà enregistrée — " : ""}laisser vide pour{" "}
+              {recaptchaSecretOk ? "ne pas la changer" : "ne rien modifier"})
+            </span>
+            <input
+              type="password"
+              name="recaptchaSecretKey"
+              placeholder={recaptchaSecretOk ? "••••••••••••••••••••" : "6L…"}
+              autoComplete="off"
+              disabled={recaptchaSecretLockedByEnv}
+              maxLength={300}
+            />
+          </label>
+          {recaptchaSecretLockedByEnv && (
+            <p className="subtitle">
+              Une variable d&apos;environnement <code className="slug">RECAPTCHA_SECRET_KEY</code>{" "}
+              est définie sur le serveur : elle est utilisée en priorité et ce champ reste sans
+              effet.
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="btn principal"
+            disabled={recaptchaSiteLockedByEnv && recaptchaSecretLockedByEnv}
+          >
+            Enregistrer
+          </button>
+          {(recaptchaSiteKey || recaptchaSecretOk) && (
             <>
               {" "}
               <button

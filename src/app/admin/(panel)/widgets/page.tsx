@@ -10,11 +10,22 @@ export default async function WidgetsPage({
   searchParams: Promise<{ ok?: string }>;
 }) {
   const { ok } = await searchParams;
-  const [phone, facebookUrl, linkedinUrl, shareBarEnabled] = await Promise.all([
+  const [
+    phone,
+    facebookUrl,
+    linkedinUrl,
+    shareBarEnabled,
+    shareFacebookUrl,
+    shareTwitterUrl,
+    shareLinkedinUrl,
+  ] = await Promise.all([
     getSetting("widgetPhone", ""),
     getSetting("widgetFacebookUrl", ""),
     getSetting("widgetLinkedinUrl", ""),
     getSetting("widgetShareBarEnabled", "1"),
+    getSetting("widgetShareFacebookUrl", ""),
+    getSetting("widgetShareTwitterUrl", ""),
+    getSetting("widgetShareLinkedinUrl", ""),
   ]);
 
   return (
@@ -33,7 +44,15 @@ export default async function WidgetsPage({
 
       <WidgetsForm
         action={saveWidgetsAction}
-        initial={{ phone, facebookUrl, linkedinUrl, shareBarEnabled: shareBarEnabled !== "0" }}
+        initial={{
+          phone,
+          facebookUrl,
+          linkedinUrl,
+          shareBarEnabled: shareBarEnabled !== "0",
+          shareFacebookUrl,
+          shareTwitterUrl,
+          shareLinkedinUrl,
+        }}
       />
     </>
   );

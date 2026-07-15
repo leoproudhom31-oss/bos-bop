@@ -234,6 +234,45 @@ d'environnement `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` (voir
 réglages enregistrés depuis le tableau de bord — dans ce cas les champs du
 formulaire ci-dessus sont désactivés (la page l'indique).
 
+## Anti-spam du formulaire de contact
+
+Le formulaire est protégé, sans configuration, par deux mécanismes maison
+sans dépendance externe : un **champ piège (honeypot)** invisible pour un
+humain mais rempli par la plupart des robots, et une **limite de fréquence
+par IP** (5 envois par 10 minutes). Une soumission suspecte reçoit la même
+confirmation qu'un envoi normal, mais n'est pas enregistrée.
+
+### Connecter reCAPTCHA
+
+Le reCAPTCHA *invisible* d'origine du template dépendait d'une clé verrouillée
+sur l'ancien domaine (`www.bos-bop.fr`) et d'un chargeur périmé : il affichait
+un badge cassé et ne vérifiait plus rien. Il est désormais retiré, et
+remplaçable par une **case reCAPTCHA v2 « Je ne suis pas un robot »** en
+option. Tout se règle depuis **Réglages → Protection anti-robot**, sans accès
+au serveur.
+
+1. **Créer un site reCAPTCHA** sur
+   [google.com/recaptcha/admin](https://www.google.com/recaptcha/admin/create).
+   - Type : **reCAPTCHA v2** → **« Je ne suis pas un robot » Case à cocher** ;
+   - Domaines : ajoutez le domaine où le site est servi (par exemple
+     `bos-bop.lp-folio.fr`, puis `www.bos-bop.fr` le jour de la bascule).
+2. **Copier les deux clés** fournies par Google (clé de site, publique ; clé
+   secrète, privée) dans Réglages → Protection anti-robot, puis Enregistrer.
+3. **Vérifier** : la page de contact affiche alors la case reCAPTCHA au-dessus
+   du bouton « Envoyer ». Un envoi sans cocher la case est refusé avec un
+   message invitant à réessayer ; une fois cochée, le message part
+   normalement.
+
+Le champ piège et la limite de fréquence restent actifs en plus, en défense en
+profondeur. Si Google est momentanément injoignable, l'envoi n'est pas bloqué
+(on accorde le bénéfice du doute, ces deux protections continuant de
+s'appliquer). **Retirer les clés** : bouton dédié en bas du même formulaire (le
+formulaire repasse à la protection honeypot + limite de fréquence seule).
+
+Les variables d'environnement `RECAPTCHA_SITE_KEY` et `RECAPTCHA_SECRET_KEY`
+sont également prises en charge et prioritaires sur les réglages du tableau de
+bord (mêmes conventions que Stripe).
+
 ## Structure du dépôt
 
 ```
@@ -261,10 +300,11 @@ src/components/    composants React de l'administration
   vides les remplacent (`public/assets/js/44da…_js.js`, `9673…_js.js`).
   L'identifiant `UA-143935594-1` (Universal Analytics) est de toute façon
   obsolète — prévoir une migration GA4 si le suivi est souhaité.
-- Le reCAPTCHA du formulaire de contact garde la clé du site d'origine
-  (domaine bos-bop.fr). Le serveur enregistre les messages sans vérification
-  côté serveur pour l'instant ; brancher la vérification dans
-  `src/app/api/contact/route.ts` si du spam apparaît.
+- **Anti-spam du formulaire de contact** : honeypot + limite de fréquence par
+  IP toujours actifs, et case reCAPTCHA v2 vérifiée côté serveur si des clés
+  sont configurées (voir la section « Anti-spam du formulaire de contact » plus
+  haut, `src/lib/recaptcha.ts` et `src/app/api/contact/route.ts`). Le reCAPTCHA
+  invisible cassé d'origine est retiré du rendu.
 - **Défilement** : le template d'origine fige la page (`position:fixed` sur
   `<html>`) pendant l'ouverture du menu mobile et ne la libère qu'en fin
   d'animation. `public/js/scroll-manager.js` libère le défilement dès le début
