@@ -17,6 +17,11 @@ export type WidgetSettings = {
   facebookUrl: string;
   linkedinUrl: string;
   shareBarEnabled: boolean;
+  // Destinations personnalisées des icônes de la barre de partage. Vide =
+  // comportement par défaut (partage de la page affichée).
+  shareFacebookUrl: string;
+  shareTwitterUrl: string;
+  shareLinkedinUrl: string;
 };
 
 // Valeurs d'origine du site, telles qu'elles apparaissent dans templates/ —
@@ -109,12 +114,30 @@ export function applyWidgetCustomization(html: string, widgets: WidgetSettings):
 
   if (widgets.shareBarEnabled) {
     const pageUrlMatch = out.match(SHARE_PAGE_URL_RE);
-    if (pageUrlMatch) {
-      const pageUrl = decodeURIComponent(pageUrlMatch[1]);
-      out = out
-        .replace(SHARE_FACEBOOK_HREF_RE, `$1https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}$2`)
-        .replace(SHARE_TWITTER_HREF_RE, `$1https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}$2`)
-        .replace(SHARE_LINKEDIN_HREF_RE, `$1https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}$2`);
+    const pageUrl = pageUrlMatch ? decodeURIComponent(pageUrlMatch[1]) : "";
+
+    // Pour chaque icône : lien personnalisé s'il est renseigné (ex. la page
+    // Facebook de BOS & BOP), sinon partage de la page affichée (par défaut).
+    const facebookHref =
+      widgets.shareFacebookUrl.trim() ||
+      (pageUrl ? `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}` : "");
+    const twitterHref =
+      widgets.shareTwitterUrl.trim() ||
+      (pageUrl ? `https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}` : "");
+    const linkedinHref =
+      widgets.shareLinkedinUrl.trim() ||
+      (pageUrl ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}` : "");
+
+    // Remplacement par fonction : évite toute interprétation des `$` qu'une URL
+    // saisie pourrait contenir.
+    if (facebookHref) {
+      out = out.replace(SHARE_FACEBOOK_HREF_RE, (_m, p1, p2) => p1 + escapeHtml(facebookHref) + p2);
+    }
+    if (twitterHref) {
+      out = out.replace(SHARE_TWITTER_HREF_RE, (_m, p1, p2) => p1 + escapeHtml(twitterHref) + p2);
+    }
+    if (linkedinHref) {
+      out = out.replace(SHARE_LINKEDIN_HREF_RE, (_m, p1, p2) => p1 + escapeHtml(linkedinHref) + p2);
     }
   } else {
     out = out.replace(SHARE_BAR_RE, "");

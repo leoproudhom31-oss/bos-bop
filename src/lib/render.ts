@@ -101,12 +101,25 @@ export function applyHeroCustomization(
 /** Assemble le document HTML complet d'une page (gabarit + contenu + menu). */
 export async function renderDocument(page: ShellPage): Promise<string> {
   const menu = await getMenuEntries();
-  const [siteUrl, phone, facebookUrl, linkedinUrl, shareBarEnabled, shopEnabled] = await Promise.all([
+  const [
+    siteUrl,
+    phone,
+    facebookUrl,
+    linkedinUrl,
+    shareBarEnabled,
+    shareFacebookUrl,
+    shareTwitterUrl,
+    shareLinkedinUrl,
+    shopEnabled,
+  ] = await Promise.all([
     getSetting("siteUrl", DEFAULT_SITE_URL),
     getSetting("widgetPhone", ""),
     getSetting("widgetFacebookUrl", ""),
     getSetting("widgetLinkedinUrl", ""),
     getSetting("widgetShareBarEnabled", "1"),
+    getSetting("widgetShareFacebookUrl", ""),
+    getSetting("widgetShareTwitterUrl", ""),
+    getSetting("widgetShareLinkedinUrl", ""),
     getSetting("shopEnabled", "0"),
   ]);
   // Pastille « Mon panier » de l'en-tête (avec compteur d'articles) :
@@ -127,6 +140,9 @@ export async function renderDocument(page: ShellPage): Promise<string> {
     facebookUrl,
     linkedinUrl,
     shareBarEnabled: shareBarEnabled !== "0",
+    shareFacebookUrl,
+    shareTwitterUrl,
+    shareLinkedinUrl,
   });
 }
 

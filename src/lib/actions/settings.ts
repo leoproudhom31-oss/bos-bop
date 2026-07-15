@@ -32,6 +32,9 @@ export async function saveWidgetsAction(formData: FormData) {
   await setSetting("widgetFacebookUrl", str(formData, "widgetFacebookUrl", 300));
   await setSetting("widgetLinkedinUrl", str(formData, "widgetLinkedinUrl", 300));
   await setSetting("widgetShareBarEnabled", formData.get("widgetShareBarEnabled") === "1" ? "1" : "0");
+  await setSetting("widgetShareFacebookUrl", str(formData, "widgetShareFacebookUrl", 300));
+  await setSetting("widgetShareTwitterUrl", str(formData, "widgetShareTwitterUrl", 300));
+  await setSetting("widgetShareLinkedinUrl", str(formData, "widgetShareLinkedinUrl", 300));
   revalidatePath("/admin/widgets");
   revalidatePath("/", "layout");
   redirect("/admin/widgets?ok=1");
