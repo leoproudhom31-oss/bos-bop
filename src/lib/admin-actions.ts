@@ -38,4 +38,5 @@ export { updateOrderStatusAction } from "./actions/orders";
 export {
   saveSettingsAction,
   saveHeroAction,
+  saveWidgetsAction,
 } from "./actions/settings";

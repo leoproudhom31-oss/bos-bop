@@ -12,6 +12,7 @@ import {
 import { renderShell, escapeHtml } from "./shell.mjs";
 import { editorScriptHtml } from "./editor-script";
 import { ICON_FIX_STYLE } from "./icon-fix";
+import { applyWidgetCustomization } from "./widgets";
 
 export const HTML_HEADERS = {
   "content-type": "text/html; charset=utf-8",
@@ -100,13 +101,19 @@ export function applyHeroCustomization(
 /** Assemble le document HTML complet d'une page (gabarit + contenu + menu). */
 export async function renderDocument(page: ShellPage): Promise<string> {
   const menu = await getMenuEntries();
-  const siteUrl = await getSetting("siteUrl", DEFAULT_SITE_URL);
-  return renderShell(
+  const [siteUrl, phone, facebookUrl, linkedinUrl] = await Promise.all([
+    getSetting("siteUrl", DEFAULT_SITE_URL),
+    getSetting("widgetPhone", ""),
+    getSetting("widgetFacebookUrl", ""),
+    getSetting("widgetLinkedinUrl", ""),
+  ]);
+  const html = renderShell(
     getTemplates(),
     { ...page, extraTail: page.extraTail + SAFETY_SCRIPTS },
     menu,
     { siteUrl },
   );
+  return applyWidgetCustomization(html, { phone, facebookUrl, linkedinUrl });
 }
 
 /** Rendu d'une page stockée en base. */
