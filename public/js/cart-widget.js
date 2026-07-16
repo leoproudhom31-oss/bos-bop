@@ -19,21 +19,25 @@
     '<circle cx="10" cy="20" r="1.4"/><circle cx="17.5" cy="20" r="1.4"/></svg>';
 
   var CSS =
-    // Encadré « téléphone + panier » de l'en-tête : les deux lignes alignées,
-    // icônes dorées et séparateur discret pour les regrouper visuellement.
-    // Volontairement sans bordure ni fond (l'espace vertical de l'en-tête est
+    // Encadré « téléphone + panier » de l'en-tête : le numéro reste tel quel
+    // (icône dorée), et le panier devient un vrai bouton — pastille marine
+    // aux accents dorés, étirée sur la largeur de l'encadré — plutôt qu'une
+    // simple ligne de texte : l'intégration paraît voulue, pas rapportée.
+    // Hauteur volontairement compacte (l'espace vertical de l'en-tête est
     // compté : un panneau plus haut déborderait sur la barre de navigation).
-    ".bd-joomlaposition-32 .custom{display:inline-flex;flex-direction:column;line-height:1.25;}" +
+    ".bd-joomlaposition-32 .custom{display:inline-flex;flex-direction:column;" +
+    "align-items:stretch;line-height:1.25;}" +
     ".bd-joomlaposition-32 .custom>div{display:flex;align-items:center;gap:9px;" +
     "white-space:nowrap;font-size:16px;font-weight:600;}" +
     ".bd-joomlaposition-32 .custom>div a{color:inherit;text-decoration:none;}" +
     ".bd-joomlaposition-32 .custom>div a:hover{text-decoration:underline;}" +
     ".bd-joomlaposition-32 .custom>div .icon-phone{color:#ddc076;}" +
 
-    "#bd-cart-widget{display:inline-flex;align-items:center;gap:8px;margin-top:6px;" +
-    "padding-top:6px;border-top:1px solid rgba(221,192,118,.35);" +
-    "color:inherit;text-decoration:none;font-weight:600;white-space:nowrap;cursor:pointer;}" +
-    "#bd-cart-widget:hover .bd-cart-label{text-decoration:underline;}" +
+    "#bd-cart-widget{display:flex;align-items:center;justify-content:center;gap:8px;" +
+    "margin-top:7px;padding:6px 14px;border-radius:18px;background:#102f40;color:#fff;" +
+    "text-decoration:none;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;" +
+    "transition:background .15s ease;}" +
+    "#bd-cart-widget:hover{background:#1d4a63;}" +
     "#bd-cart-widget .bd-cart-icon{color:#ddc076;display:inline-flex;}" +
     "#bd-cart-widget .bd-cart-badge{display:none;min-width:20px;height:20px;border-radius:10px;" +
     "background:#ddc076;color:#102f40;font-size:12px;line-height:20px;text-align:center;" +
@@ -42,7 +46,7 @@
     // Repli (gabarit inattendu, encadré téléphone absent) : pastille flottante
     // autonome, sans dépendre du panneau parent.
     "#bd-cart-widget.bd-cart-floating{position:fixed;right:16px;bottom:16px;z-index:9998;" +
-    "margin:0;padding:11px 18px;border:none;background:#102f40;color:#fff;border-radius:24px;" +
+    "margin:0;padding:11px 18px;border-radius:24px;" +
     "box-shadow:0 4px 14px rgba(0,0,0,.3);}";
 
   function cartCount() {
