@@ -46,23 +46,38 @@ export async function isRecaptchaSecretConfigured(): Promise<boolean> {
  *   ne pas bloquer un visiteur légitime pendant une panne du service ; le
  *   honeypot et la limite de fréquence restent actifs.
  */
-export async function verifyRecaptcha(token: string, ip?: string): Promise<boolean> {
+export async function verifyRecaptcha(token: string): Promise<boolean> {
   const secret = await getRecaptchaSecretKey();
   if (!secret) return true;
   if (!token) return false;
 
   try {
+    // remoteip est volontairement OMIS : derrière un reverse proxy, l'IP vue
+    // par le serveur (clientIp) peut différer de celle que Google associe au
+    // jeton et provoquer un échec de vérification. Ce paramètre est facultatif.
     const body = new URLSearchParams({ secret, response: token });
-    if (ip) body.set("remoteip", ip);
     const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body,
     });
-    const data = (await res.json()) as { success?: boolean };
+    const data = (await res.json()) as {
+      success?: boolean;
+      "error-codes"?: string[];
+    };
+    if (data.success !== true) {
+      // Journalisé pour le diagnostic : par ex. "invalid-input-secret" (clé
+      // secrète erronée ou ne correspondant pas à la clé de site),
+      // "invalid-input-response" (jeton absent/expiré/tronqué),
+      // "timeout-or-duplicate" (jeton déjà utilisé ou périmé).
+      console.error(
+        "Vérification reCAPTCHA refusée par Google :",
+        (data["error-codes"] || []).join(", ") || "(aucun code d'erreur)",
+      );
+    }
     return data.success === true;
   } catch (error) {
-    console.error("Vérification reCAPTCHA impossible :", error);
+    console.error("Vérification reCAPTCHA impossible (Google injoignable) :", error);
     return true;
   }
 }

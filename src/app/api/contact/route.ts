@@ -63,7 +63,13 @@ export async function POST(request: NextRequest) {
   // reCAPTCHA (seulement s'il est configuré) : contrairement au honeypot, un
   // visiteur légitime peut avoir oublié de cocher la case — on affiche donc une
   // erreur pour qu'il puisse réessayer, au lieu d'un faux succès silencieux.
-  const recaptchaOk = await verifyRecaptcha(field("g-recaptcha-response"), clientIp(request));
+  //
+  // Le jeton reCAPTCHA est lu SANS la troncature à 2000 caractères des autres
+  // champs : les jetons v2 récents dépassent souvent cette longueur, et un
+  // jeton tronqué est rejeté par Google (« vérification non aboutie » alors que
+  // la case a bien été cochée).
+  const recaptchaToken = formString(form, "g-recaptcha-response", 20000);
+  const recaptchaOk = await verifyRecaptcha(recaptchaToken);
   if (!recaptchaOk) {
     return respond({ ok: false, error: "recaptcha" }, `${path}?erreur=recaptcha`);
   }
