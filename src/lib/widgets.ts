@@ -85,19 +85,29 @@ function facebookEmbedHtml(url: string): string {
   // (plugins/page.php), qui ne dépend ni du SDK JavaScript, ni d'un app_id,
   // ni d'un script d'initialisation : c'étaient précisément ces dépendances
   // (figées dans le dump avec des paramètres périmés) qui cassaient le widget
-  // d'origine. Mêmes dimensions et options d'affichage que l'original
-  // (360×130, facepile, sans couverture).
+  // d'origine. Mêmes options d'affichage que l'original (facepile, sans
+  // couverture), largeur 340 pour tenir dans la colonne du pied de page.
   const src =
     "https://www.facebook.com/plugins/page.php?href=" +
     encodeURIComponent(url) +
-    "&tabs=&width=360&height=130&small_header=false&adapt_container_width=true" +
+    "&tabs=&width=340&height=130&small_header=false&adapt_container_width=true" +
     "&hide_cover=false&show_facepile=true&locale=fr_FR";
+  // Div (bloc) > span (en ligne) > iframe : exactement la structure du widget
+  // d'origine (voir FACEBOOK_WIDGET_RE ci-dessus). Un span est un élément EN
+  // LIGNE, qui répond donc à la règle `text-align:center` déjà posée sur
+  // l'ancêtre .bd-blockcontent par le gabarit d'origine — c'est ce mécanisme,
+  // pas un centrage ajouté ici, qui centrait déjà le widget d'origine (visible
+  // sur la toute première capture, image cassée mais bien centrée). Un simple
+  // conteneur flex (essayé précédemment) est un élément de BLOC : il ignore ce
+  // text-align hérité et ne se centre pas de la même façon.
   return (
     `<div style="text-align:center;">` +
-    `<iframe src="${escapeHtml(src)}" width="360" height="130" ` +
-    `style="border:none;overflow:hidden;max-width:100%;" scrolling="no" frameborder="0" ` +
+    `<span style="display:inline-block;max-width:100%;">` +
+    `<iframe src="${escapeHtml(src)}" width="340" height="130" ` +
+    `style="border:none;overflow:hidden;max-width:100%;vertical-align:top;" scrolling="no" frameborder="0" ` +
     `allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" ` +
     `title="Page Facebook de BOS &amp; BOP"></iframe>` +
+    `</span>` +
     `</div>`
   );
 }

@@ -125,9 +125,9 @@ export default function WidgetsForm({ action, initial }: Props) {
 
   return (
     <form action={action}>
-      {/* --- Téléphone + panier (en-tête) --- */}
+      {/* --- Téléphone (en-tête) --- */}
       <div className="panel">
-        <h2 style={{ marginTop: 0 }}>Téléphone &amp; panier</h2>
+        <h2 style={{ marginTop: 0 }}>Téléphone</h2>
         <label className="champ">
           Numéro de téléphone
           <input
@@ -144,61 +144,58 @@ export default function WidgetsForm({ action, initial }: Props) {
         </p>
 
         <PreviewFrame label="Aperçu de l'encadré en-tête" light>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, whiteSpace: "nowrap", fontSize: 16, fontWeight: 600, color: NAVY }}>
+            <PhoneIcon />
+            <span>{phoneDisplay}</span>
+          </div>
+        </PreviewFrame>
+      </div>
+
+      {/* --- Panier (boutique) --- */}
+      <div className="panel">
+        <h2 style={{ marginTop: 0 }}>Panier</h2>
+        <p className="subtitle">
+          Lorsque la boutique est activée (Réglages), un bouton « Mon panier » flottant, avec
+          compteur d&apos;articles, apparaît en bas à droite de chaque page — séparé des
+          coordonnées de contact, accessible partout pendant la navigation. Rien à régler ici.
+        </p>
+        <PreviewFrame label="Aperçu du bouton flottant">
           <div
             style={{
               display: "inline-flex",
-              flexDirection: "column",
-              alignItems: "stretch",
-              color: NAVY,
-              lineHeight: 1.25,
+              alignItems: "center",
+              gap: 9,
+              padding: "11px 18px",
+              borderRadius: 26,
+              background: NAVY,
+              color: "#fff",
+              fontSize: 15,
+              fontWeight: 600,
+              boxShadow: "0 4px 16px rgba(16,47,64,.35)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 9, whiteSpace: "nowrap", fontSize: 16, fontWeight: 600 }}>
-              <PhoneIcon />
-              <span>{phoneDisplay}</span>
-            </div>
-            <div
+            <span style={{ color: GOLD, display: "inline-flex" }}>
+              <CartIcon />
+            </span>
+            <span>Mon panier</span>
+            <span
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                marginTop: 7,
-                padding: "6px 14px",
-                borderRadius: 18,
-                background: NAVY,
-                color: "#fff",
-                fontSize: 14,
-                fontWeight: 600,
+                minWidth: 21,
+                height: 21,
+                borderRadius: 11,
+                background: GOLD,
+                color: NAVY,
+                fontSize: 12,
+                lineHeight: "21px",
+                textAlign: "center",
+                padding: "0 6px",
+                fontWeight: 700,
               }}
             >
-              <span style={{ display: "inline-flex" }}>
-                <CartIcon />
-              </span>
-              <span>Mon panier</span>
-              <span
-                style={{
-                  minWidth: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  background: GOLD,
-                  color: NAVY,
-                  fontSize: 12,
-                  lineHeight: "20px",
-                  textAlign: "center",
-                  padding: "0 6px",
-                  fontWeight: 700,
-                }}
-              >
-                2
-              </span>
-            </div>
+              2
+            </span>
           </div>
         </PreviewFrame>
-        <p className="subtitle">
-          La ligne « Mon panier » (avec compteur) n&apos;apparaît sur le site que lorsque la
-          boutique est activée dans les Réglages.
-        </p>
       </div>
 
       {/* --- Facebook --- */}
