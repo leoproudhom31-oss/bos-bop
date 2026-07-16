@@ -57,14 +57,15 @@ type ShellPage = {
 //    servi hors de /assets/ (non hashé) pour ne pas être mis en cache de
 //    façon immuable ;
 //  - remplacement de la police d'icônes manquante (voir icon-fix.ts) ;
-//  - filet de sécurité pour le reCAPTCHA invisible du formulaire de contact
-//    (voir contact-fallback.js) : sans lui, un échec du widget tiers bloque
-//    silencieusement l'envoi du message.
+//  - envoi en AJAX du formulaire de contact, validation native et anti-spam
+//    (voir contact-form.js) : le mécanisme de soumission d'origine (iframe
+//    cachée + réponse d'un backend Joomla absent de ce site) ne fonctionne
+//    plus, d'où l'interception.
 // Injectés en fin de document : n'affectent jamais le HTML vérifié à l'octet
 // par extract-legacy.mjs (qui n'utilise jamais extraTail).
 const SAFETY_SCRIPTS =
   '<script src="/js/scroll-manager.js" defer="defer"></script>' +
-  '<script src="/js/contact-fallback.js" defer="defer"></script>' +
+  '<script src="/js/contact-form.js" defer="defer"></script>' +
   ICON_FIX_STYLE;
 
 const HERO_TITLE_RE =

@@ -7,7 +7,7 @@ import { seeOther } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
-// Nom du champ piège (honeypot) injecté par public/js/contact-fallback.js :
+// Nom du champ piège (honeypot) injecté par public/js/contact-form.js :
 // invisible pour un humain, souvent rempli aveuglément par les robots de spam.
 const HONEYPOT_FIELD = "bd_site_web";
 
@@ -20,9 +20,18 @@ const HONEYPOT_FIELD = "bd_site_web";
 //      sans dépendance externe ;
 //   2. reCAPTCHA v2 — uniquement si des clés sont configurées (voir
 //      src/lib/recaptcha.ts et Réglages).
+//
+// Deux formats de réponse, selon l'appelant :
+//   - `Accept: application/json` (envoi en AJAX par contact-form.js) : un
+//     petit objet JSON, lu directement par ce script pour vider le formulaire
+//     et afficher le bon message sans recharger la page ;
+//   - sinon (JavaScript désactivé, ou repli après échec réseau côté client) :
+//     redirection 303 classique vers la page de contact avec ?sent=1 ou
+//     ?erreur=recaptcha, gérée par src/app/[...slug]/route.ts.
 export async function POST(request: NextRequest) {
   const form = await request.formData();
   const field = (name: string) => formString(form, name, 2000);
+  const wantsJson = (request.headers.get("accept") || "").includes("application/json");
 
   // Retour sur la page d'origine. Seul le CHEMIN du referer est repris (jamais
   // son hôte) et la redirection est relative : on reste toujours sur le domaine
@@ -37,13 +46,18 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const respond = (result: { ok: boolean; error?: string }, redirectPath: string): Response => {
+    if (wantsJson) return Response.json(result);
+    return seeOther(redirectPath);
+  };
+
   const isBot = field(HONEYPOT_FIELD) !== "";
   const limited = isRateLimited(`contact:${clientIp(request)}`, 5, 10 * 60 * 1000);
 
   // Robot évident (honeypot) ou trop de tentatives : succès silencieux, pour ne
   // donner aucun indice exploitable au robot.
   if (isBot || limited) {
-    return seeOther(`${path}?sent=1`);
+    return respond({ ok: true }, `${path}?sent=1`);
   }
 
   // reCAPTCHA (seulement s'il est configuré) : contrairement au honeypot, un
@@ -51,7 +65,7 @@ export async function POST(request: NextRequest) {
   // erreur pour qu'il puisse réessayer, au lieu d'un faux succès silencieux.
   const recaptchaOk = await verifyRecaptcha(field("g-recaptcha-response"), clientIp(request));
   if (!recaptchaOk) {
-    return seeOther(`${path}?erreur=recaptcha`);
+    return respond({ ok: false, error: "recaptcha" }, `${path}?erreur=recaptcha`);
   }
 
   const audience = field("4") === "Others" ? field("fieldOthers[4]") : field("4");
@@ -72,5 +86,5 @@ export async function POST(request: NextRequest) {
     await prisma.contactMessage.create({ data: message });
   }
 
-  return seeOther(`${path}?sent=1`);
+  return respond({ ok: true }, `${path}?sent=1`);
 }
