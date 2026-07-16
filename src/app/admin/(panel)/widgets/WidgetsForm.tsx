@@ -63,13 +63,31 @@ const ShareMoreIcon = () => (
   </svg>
 );
 
-function PreviewFrame({ label, children }: { label: string; children: React.ReactNode }) {
+function PreviewFrame({
+  label,
+  light,
+  children,
+}: {
+  label: string;
+  /** Fond blanc (en-tête du site) plutôt que marine (pied de page). */
+  light?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: ".4px", color: "#8a8778", marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ background: NAVY, borderRadius: 10, padding: 20, display: "flex", justifyContent: "center" }}>
+      <div
+        style={{
+          background: light ? "#fff" : NAVY,
+          border: light ? "1px solid #e3e0d8" : "none",
+          borderRadius: 10,
+          padding: 20,
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
         {children}
       </div>
     </div>
@@ -125,12 +143,13 @@ export default function WidgetsForm({ action, initial }: Props) {
           est calculé automatiquement. Laisser vide restaure le numéro d&apos;origine.
         </p>
 
-        <PreviewFrame label="Aperçu de l'encadré en-tête">
+        <PreviewFrame label="Aperçu de l'encadré en-tête" light>
           <div
             style={{
               display: "inline-flex",
               flexDirection: "column",
-              color: "#fff",
+              alignItems: "stretch",
+              color: NAVY,
               lineHeight: 1.25,
             }}
           >
@@ -140,12 +159,16 @@ export default function WidgetsForm({ action, initial }: Props) {
             </div>
             <div
               style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 8,
-                marginTop: 6,
-                paddingTop: 6,
-                borderTop: `1px solid rgba(221,192,118,.35)`,
+                marginTop: 7,
+                padding: "6px 14px",
+                borderRadius: 18,
+                background: NAVY,
+                color: "#fff",
+                fontSize: 14,
                 fontWeight: 600,
               }}
             >
@@ -193,33 +216,96 @@ export default function WidgetsForm({ action, initial }: Props) {
           />
         </label>
         <p className="subtitle">
-          Le widget Facebook d&apos;origine dépend d&apos;un script tiers souvent en échec
-          (bloqueurs, réseau…) et affiche alors une image cassée. Renseigner l&apos;adresse ici
-          affiche à la place un bouton « Suivre sur Facebook » toujours fonctionnel. Laisser vide
-          conserve le widget d&apos;origine.
+          Renseigner l&apos;adresse ici affiche dans le pied de page la vraie carte de la page
+          Facebook (photo, nom, abonnés, boutons « Suivre la Page » / « Partager »), comme sur le
+          site d&apos;origine — mais par le canal officiel actuel de Facebook, sans le script périmé
+          qui affichait une image cassée. Laisser vide conserve le widget d&apos;origine tel quel.
         </p>
         <PreviewFrame label="Aperçu du pied de page">
           {facebookUrl.trim() ? (
-            <a
-              href={facebookUrl.trim()}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.preventDefault()}
+            <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 9,
-                color: GOLD,
-                textDecoration: "none",
-                fontWeight: 600,
-                border: `1px solid ${GOLD}`,
-                borderRadius: 8,
-                padding: "11px 20px",
+                background: "#fff",
+                borderRadius: 4,
+                padding: "12px 14px",
+                width: 300,
+                textAlign: "left",
+                boxShadow: "0 1px 5px rgba(0,0,0,.35)",
               }}
             >
-              <FacebookIcon />
-              <span>Suivre sur Facebook</span>
-            </a>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    flex: "0 0 auto",
+                    width: 40,
+                    height: 40,
+                    border: "2px solid #111",
+                    borderRadius: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 800,
+                    fontSize: 10,
+                    color: "#111",
+                    textAlign: "center",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  BOS
+                  <br />
+                  BOP
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      color: "#365899",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    BOS et BOP — orientation scol…
+                  </div>
+                  <div style={{ color: "#90949c", fontSize: 12 }}>64 followers</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    background: "#f5f6f7",
+                    border: "1px solid #ccd0d5",
+                    borderRadius: 3,
+                    padding: "3px 9px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#4b4f56",
+                  }}
+                >
+                  <span style={{ color: "#365899", display: "inline-flex" }}>
+                    <FacebookIcon />
+                  </span>
+                  Suivre la Page
+                </span>
+                <span
+                  style={{
+                    background: "#f5f6f7",
+                    border: "1px solid #ccd0d5",
+                    borderRadius: 3,
+                    padding: "3px 9px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#4b4f56",
+                  }}
+                >
+                  Partager
+                </span>
+              </div>
+            </div>
           ) : (
             <span style={{ color: "#b9c2c9", fontStyle: "italic", fontSize: 14 }}>
               Widget Facebook d&apos;origine conservé
