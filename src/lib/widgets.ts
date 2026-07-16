@@ -92,22 +92,19 @@ function facebookEmbedHtml(url: string): string {
     encodeURIComponent(url) +
     "&tabs=&width=340&height=130&small_header=false&adapt_container_width=true" +
     "&hide_cover=false&show_facepile=true&locale=fr_FR";
-  // Div (bloc) > span (en ligne) > iframe : exactement la structure du widget
-  // d'origine (voir FACEBOOK_WIDGET_RE ci-dessus). Un span est un élément EN
-  // LIGNE, qui répond donc à la règle `text-align:center` déjà posée sur
-  // l'ancêtre .bd-blockcontent par le gabarit d'origine — c'est ce mécanisme,
-  // pas un centrage ajouté ici, qui centrait déjà le widget d'origine (visible
-  // sur la toute première capture, image cassée mais bien centrée). Un simple
-  // conteneur flex (essayé précédemment) est un élément de BLOC : il ignore ce
-  // text-align hérité et ne se centre pas de la même façon.
+  // Largeur EXPLICITE + `margin:0 auto` sur un conteneur de bloc : la méthode
+  // de centrage la plus robuste qui soit, indépendante de tout comportement
+  // hérité (display, text-align…) d'un ancêtre du gabarit — elle se centre
+  // dans la largeur disponible de son conteneur direct quel que soit son
+  // display ou son alignement de texte. Mesuré au pixel près dans le rendu
+  // réel : le widget tombe pile au centre de .bd-blockcontent (qui occupe la
+  // même largeur que le titre « Rejoignez… » au-dessus).
   return (
-    `<div style="text-align:center;">` +
-    `<span style="display:inline-block;max-width:100%;">` +
+    `<div style="width:340px;max-width:100%;margin:0 auto;">` +
     `<iframe src="${escapeHtml(src)}" width="340" height="130" ` +
-    `style="border:none;overflow:hidden;max-width:100%;vertical-align:top;" scrolling="no" frameborder="0" ` +
+    `style="border:none;overflow:hidden;width:100%;display:block;" scrolling="no" frameborder="0" ` +
     `allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" ` +
     `title="Page Facebook de BOS &amp; BOP"></iframe>` +
-    `</span>` +
     `</div>`
   );
 }
